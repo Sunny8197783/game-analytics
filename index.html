@@ -165,6 +165,58 @@ code{font-family:var(--mono);font-size:12px;background:var(--surface-2);padding:
 .msg.err{color:var(--bad)} .msg.ok{color:var(--good)}
 .hr{height:1px;background:var(--line);margin:14px 0}
 
+/* ---------- players ---------- */
+.subtabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:-4px 0 16px}
+.subtabs a{padding:8px 14px;font-size:13.5px;color:var(--text-2);text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-1px}
+.subtabs a.on{color:var(--text);font-weight:600;border-bottom-color:var(--series-1)}
+.subtabs a .cnt{font-family:var(--mono);font-size:11.5px;color:var(--text-3);margin-left:4px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.filters input,.filters select{border:1px solid var(--line-strong);background:var(--surface);border-radius:8px;padding:6px 10px;font-size:13px}
+.filters input{width:170px;font-family:var(--mono)}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:4px 11px;font-size:12.5px;cursor:pointer;color:var(--text-2)}
+.chip.on{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+.chip .n{font-family:var(--mono);margin-left:4px;opacity:.75}
+.st{display:inline-flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap}
+.st i{width:7px;height:7px;border-radius:50%}
+.st.done i{background:var(--good)} .st.active i{background:var(--series-1)} .st.idle i{background:var(--text-3)} .st.gone i{background:var(--series-2)}
+.pid{font-family:var(--mono);font-size:12.5px;color:var(--series-1);text-decoration:none}
+.pid:hover{text-decoration:underline}
+.journey{display:flex;gap:2px;height:14px;align-items:stretch;min-width:240px}
+.journey span{background:var(--series-1);min-width:2px;border-radius:1px}
+.journey span:nth-child(even){opacity:.62}
+.journey span.exit{background:var(--series-2);opacity:1;border-radius:0 4px 4px 0}
+.journey span.live{background:repeating-linear-gradient(135deg,var(--series-1) 0 3px,transparent 3px 6px);opacity:1;border:1px solid var(--series-1);border-radius:0 4px 4px 0}
+.journey span.fin{background:var(--good);opacity:1;border-radius:0 4px 4px 0}
+.j-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--text-2);margin-bottom:10px}
+.j-legend span{display:inline-flex;align-items:center;gap:6px}
+.j-legend i{width:14px;height:10px;border-radius:2px;display:inline-block}
+.seg-row{display:grid;grid-template-columns:minmax(120px,210px) 1fr 120px;gap:12px;align-items:center;padding:6px 4px;border-radius:6px}
+.seg-row:hover{background:var(--surface-2)}
+.seg-row .nm{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seg-row .nm small{display:block;color:var(--text-3);font-size:11.5px}
+.seg-track{position:relative;height:16px}
+.seg-bar{position:absolute;left:0;top:0;bottom:0;background:var(--series-1);border-radius:0 4px 4px 0;min-width:2px}
+.seg-bar.exit{background:var(--series-2)}
+.seg-bar.live{background:repeating-linear-gradient(135deg,var(--series-1) 0 3px,transparent 3px 6px);border:1px solid var(--series-1)}
+.seg-med{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--text);opacity:.55;border-radius:1px}
+.seg-val{font-family:var(--mono);font-size:12.5px;text-align:right}
+.seg-val small{display:block;color:var(--text-3);font-family:var(--sans);font-size:11px}
+.sess{border-top:1px solid var(--line);padding:12px 2px}
+.sess:first-child{border-top:0}
+.sess-h{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;font-size:13px}
+.sess-h b{font-family:var(--mono);font-weight:500}
+.sess-h span{color:var(--text-3);font-size:12px}
+.sess-bar{position:relative;height:12px;background:var(--surface-2);border-radius:3px;margin:8px 0 6px}
+.sess-fill{position:absolute;left:0;top:0;bottom:0;background:var(--seq-weak);border-radius:3px}
+.sess-tick{position:absolute;top:-3px;width:8px;height:18px;margin-left:-4px;border-radius:2px;background:var(--series-1);border:2px solid var(--surface);cursor:default}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.mchip{font-size:12px;border:1px solid var(--line);border-radius:6px;padding:2px 7px;background:var(--surface)}
+.mchip b{font-weight:500}
+.mchip small{font-family:var(--mono);color:var(--text-3);margin-left:4px}
+.gap{font-size:11.5px;color:var(--text-3);text-align:center;padding:2px 0;position:relative}
+.back{font-size:13px;color:var(--text-2);text-decoration:none;display:inline-block;margin-bottom:10px}
+.back:hover{color:var(--text)}
+.pager{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:12px;font-size:12.5px;color:var(--text-3)}
 .menu-btn{display:none}
 @media (max-width:900px){
   .app{grid-template-columns:1fr}
@@ -386,6 +438,9 @@ const Live = {
   dwell: (g, r) => Live.rpc('analytics_dwell_hist', { p_game:g, p_from:Live.iso(r.from), p_to:Live.iso(r.to) }),
   freq: (g, r) => Live.rpc('analytics_visit_freq', { p_game:g, p_from:Live.iso(r.from), p_to:Live.iso(r.to) }),
   sessions: (g, r) => Live.rpc('analytics_sessions', { p_game:g, p_from:Live.iso(r.from), p_to:Live.iso(r.to), p_limit:100 }),
+  players: (g, r) => Live.rpc('analytics_players', { p_game:g, p_from:Live.iso(r.from), p_to:Live.iso(r.to), p_limit:2000 }),
+  segments: (g, r) => Live.rpc('analytics_segments', { p_game:g, p_from:Live.iso(r.from), p_to:Live.iso(r.to) }),
+  playerDetail: (g, v) => Live.rpc('analytics_player_detail', { p_game:g, p_visitor:v }),
   isAdmin: () => Live.req('/rest/v1/admins?select=user_id').then(a => a.length > 0),
 };
 
@@ -431,10 +486,10 @@ const Demo = (() => {
         let last = null, maxStep = null;
         for (let j = 0; j < k; j++) {
           const m = ms[idx + j];
-          reaches.push({ game:g.id, vid, sid:id, step:m.step, name:m.name, total: total + dwell * (j + 1) / (k + 1), t });
+          reaches.push({ game:g.id, vid, sid:id, step:m.step, name:m.name, total: total + dwell * (j + 1) / (k + 1), el: dwell * (j + 1) / (k + 1), t });
           last = m.name; maxStep = m.step;
         }
-        sessions.push({ game:g.id, vid, sid:id, t, dwell, last, maxStep, device });
+        sessions.push({ game:g.id, vid, sid:id, t, dwell, last, maxStep, device, startTotal: total });
         idx += k; total += dwell;
         if (idx >= ms.length && R() < .7) break;
         t += (R() < .5 ? R() * DAY : R() * 9 * DAY) + 600000;
@@ -507,12 +562,54 @@ const Demo = (() => {
     const all = sessions.filter(s => s.game === g && s.t < r.to).sort((a, b) => a.t - b.t);
     const no = {}; const rows = all.map(s => ({ ...s, visit_no: (no[s.vid] = (no[s.vid] || 0) + 1) }));
     return rows.reverse().slice(0, 100).map(s => ({
-      session_id:s.sid, visitor_id: hash(s.vid), started_at:new Date(s.t).toISOString(),
+      session_id:s.sid, visitor_id: pid(s.vid), started_at:new Date(s.t).toISOString(),
       dwell_sec:Math.round(s.dwell / 1000), last_milestone:s.last, max_step:s.maxStep, device:s.device, visit_no:s.visit_no }));
   }
-  function hash(s) { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return (h >>> 0).toString(16).padStart(8, '0') + '-demo'; }
+  function h32(s) { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return (h >>> 0).toString(16).padStart(8, '0'); }
+  const vidOf = {};
+  function pid(vid) { const id = `${h32(vid)}-${h32(vid + 1).slice(0, 4)}-4${h32(vid + 2).slice(0, 3)}-a${h32(vid + 3).slice(0, 3)}-${h32(vid + 4)}${h32(vid + 5).slice(0, 4)}`; vidOf[id] = vid; return id; }
+  // 사람별 색인
+  const sessBy = {}, reachBy = {};
+  sessions.forEach(s => (sessBy[s.vid] = sessBy[s.vid] || []).push(s));
+  reaches.forEach(x => (reachBy[x.vid] = reachBy[x.vid] || []).push(x));
+  Object.values(sessBy).forEach(a => a.sort((x, y) => x.t - y.t));
+  function segsOf(vid) {
+    const ss = (sessBy[vid] || []).filter(s => s.t < now), end = ss.reduce((a, s) => a + s.dwell, 0);
+    const first = {};
+    (reachBy[vid] || []).forEach(x => { if (x.t < now && (!(x.step in first) || x.total < first[x.step].t)) first[x.step] = { step:x.step, name:x.name, t:x.total }; });
+    const pts = [{ step:0, name:'접속', t:0 }, ...Object.values(first)].sort((a, b) => a.t - b.t || a.step - b.step);
+    return { end, segs: pts.map((p, i) => ({ step:p.step, name:p.name, at_ms:Math.round(p.t), ms:Math.round(Math.max(0, (i < pts.length - 1 ? pts[i + 1].t : end) - p.t)), exit:i === pts.length - 1 })) };
+  }
+  const activeVids = (g, r) => [...new Set(sessions.filter(s => s.game === g && inR(s, r)).map(s => s.vid))];
+  function players(g, r) {
+    return activeVids(g, r).map(vid => {
+      const ss = sessBy[vid].filter(s => s.t < now), { end, segs } = segsOf(vid);
+      const rs = (reachBy[vid] || []).filter(x => x.t < now).sort((a, b) => b.total - a.total);
+      const dev = {}; ss.forEach(s => dev[s.device] = (dev[s.device] || 0) + 1);
+      const lastSeg = segs[segs.length - 1];
+      return { visitor_id:pid(vid), first_seen:new Date(ss[0].t).toISOString(), last_seen:new Date(Math.max(...ss.map(s => s.t + s.dwell))).toISOString(),
+        sessions:ss.length, total_ms:Math.round(end), max_step:rs.length ? Math.max(...rs.map(x => x.step)) : null, last_milestone:rs.length ? rs[0].name : null,
+        last_segment_ms:lastSeg.ms, device:Object.entries(dev).sort((a, b) => b[1] - a[1])[0][0], referrer:null, segments:segs };
+    }).sort((a, b) => b.last_seen.localeCompare(a.last_seen));
+  }
+  function segments(g, r) {
+    const by = {};
+    activeVids(g, r).forEach(vid => segsOf(vid).segs.forEach(sg => { (by[sg.step] = by[sg.step] || { step:sg.step, name:sg.name, all:[], mv:[], ex:[] }); by[sg.step].all.push(sg.ms); (sg.exit ? by[sg.step].ex : by[sg.step].mv).push(sg.ms); }));
+    const q = (a, p) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y), i = (s.length - 1) * p, lo = Math.floor(i); return Math.round((s[lo] + (s[Math.ceil(i)] - s[lo]) * (i - lo)) / 1000); };
+    return Object.values(by).sort((a, b) => a.step - b.step).map(b => ({ step:b.step, name:b.name, entered:b.all.length, moved_on:b.mv.length, exited:b.ex.length,
+      median_sec:q(b.all, .5), median_moved_sec:q(b.mv, .5), median_exited_sec:q(b.ex, .5), avg_sec:Math.round(b.all.reduce((a, x) => a + x, 0) / b.all.length / 1000), p90_sec:q(b.all, .9) }));
+  }
+  function playerDetail(g, id) {
+    const vid = vidOf[id]; if (!vid) return { sessions:[], milestones:[], total_ms:null };
+    const ss = sessBy[vid].filter(s => s.t < now);
+    return {
+      sessions: ss.map(s => ({ session_id:s.sid, started_at:new Date(s.t).toISOString(), last_seen_at:new Date(s.t + s.dwell).toISOString(), dwell_ms:Math.round(s.dwell), device:s.device, referrer:null, start_total_ms:Math.round(s.startTotal) })),
+      milestones: (reachBy[vid] || []).filter(x => x.t < now).sort((a, b) => a.total - b.total).map(x => ({ session_id:x.sid, step:x.step, name:x.name, elapsed_ms:Math.round(x.el), total_ms:Math.round(x.total), at:new Date(x.t + x.el).toISOString() })),
+      total_ms: Math.round(ss.reduce((a, s) => a + s.dwell, 0)) };
+  }
   const later = f => (...a) => new Promise(res => setTimeout(() => res(f(...a)), 60));
-  return { overview:later(overview), daily:later(daily), funnel:later(funnel), dwell:later(dwell), freq:later(freq), sessions:later(list) };
+  return { overview:later(overview), daily:later(daily), funnel:later(funnel), dwell:later(dwell), freq:later(freq), sessions:later(list),
+           players:later(players), segments:later(segments), playerDetail:later(playerDetail) };
 })();
 
 const api = () => state.mode === 'live' ? Live : Demo;
@@ -638,7 +735,7 @@ function renderNav() {
   $('#nav').innerHTML =
     `<a href="#overview" class="${cur === 'overview' ? 'on' : ''}">전체 개요</a>` +
     `<div class="nav-label">게임</div>` +
-    GAMES.map(g => `<a href="#game-${slug(g.id)}" class="${cur === 'game-' + slug(g.id) ? 'on' : ''}"><span>${esc(g.name)}</span>${cnt(g.id) ? `<span class="cnt">${cnt(g.id)}</span>` : (g.url ? '' : '<span class="tag">링크 없음</span>')}</a>`).join('') +
+    GAMES.map(g => `<a href="#game-${slug(g.id)}" class="${[ 'game-', 'players-' ].some(p => cur === p + slug(g.id)) || cur.startsWith('player-' + slug(g.id) + '--') ? 'on' : ''}"><span>${esc(g.name)}</span>${cnt(g.id) ? `<span class="cnt">${cnt(g.id)}</span>` : (g.url ? '' : '<span class="tag">링크 없음</span>')}</a>`).join('') +
     `<div class="nav-label">설정</div><a href="#guide" class="${cur === 'guide' ? 'on' : ''}">설치 가이드</a>`;
 }
 
@@ -740,7 +837,7 @@ async function viewGame(id) {
   const finalStep = g.final ?? Math.max(...g.ms.map(m => m[0]));
   const finished = !!last && Number(last.step) >= finalStep;
 
-  view.innerHTML = `
+  view.innerHTML = subtabs(g, 'summary', V) + `
     <div class="kpis">
       <div class="kpi"><div class="l">방문자 (고유)</div><div class="v">${fmtN(V)}</div><div class="d">신규 ${fmtN(o.new_visitors)}명 · 접속 ${fmtN(o.sessions)}회</div></div>
       <div class="kpi"><div class="l">1인당 접속</div><div class="v">${(o.sessions / V).toFixed(1)}<small>회</small></div><div class="d">재방문 ${fmtN(o.returning_visitors)}명 (${pct(o.returning_visitors, V)}%)</div></div>
@@ -748,6 +845,7 @@ async function viewGame(id) {
       <div class="kpi"><div class="l">${!last ? '마일스톤' : finished ? '끝까지 간 사람' : '가장 멀리 간 지점'}</div><div class="v">${last ? pct(last.visitors_reached, V) + '<small>%</small>' : '–'}</div><div class="d">${last ? `${esc(last.milestone)} 도달 ${fmtN(last.visitors_reached)}명` : '아직 마일스톤 기록 없음'}</div></div>
     </div>
     ${card('cFunnel', '어디서 빠지나 · 마일스톤 퍼널', '도달 = 그 지점을 밟은 사람 수 · 여기서 멈춤 = 기간 중 마지막으로 도달한 지점이 여기인 사람 수', '', true)}
+    ${card('cSeg', '구간별로 머문 시간', '구간 = 한 지점에 도착해서 다음 지점에 도착할 때까지 실제로 플레이한 시간 (여러 번 나눠 접속해도 이어서 계산)', '<div class="empty">불러오는 중…</div>', true)}
     <div class="grid2">
       ${card('cDwell', '체류시간 분포', '접속 1회당 실제로 화면을 보며 조작한 시간')}
       ${card('cFreq', '같은 사람이 몇 번 들어왔나', '기간 안 사람별 접속 횟수')}
@@ -815,11 +913,13 @@ async function viewGame(id) {
   // sessions
   let shown = 20;
   const drawSess = () => { $('#sessTable').innerHTML = list.length ? `<div class="tbl-wrap"><table><thead><tr><th>시작</th><th>방문자</th><th>몇 번째 방문</th><th>체류</th><th style="text-align:left">마지막 마일스톤</th><th>기기</th></tr></thead><tbody>${
-    list.slice(0, shown).map(s => `<tr><td class="l num">${fmtTime(s.started_at)}</td><td class="num">${esc(String(s.visitor_id).slice(0, 6))}</td><td class="num">${s.visit_no}번째</td><td class="num">${fmtDur(s.dwell_sec)}</td><td class="l">${esc(s.last_milestone || '–')}</td><td>${({ mobile:'모바일', desktop:'PC', tablet:'태블릿' })[s.device] || '–'}</td></tr>`).join('')
+    list.slice(0, shown).map(s => `<tr><td class="l num">${fmtTime(s.started_at)}</td><td class="num"><a class="pid" href="#player-${slug(g.id)}--${esc(s.visitor_id)}">${esc(String(s.visitor_id).slice(0, 6))}</a></td><td class="num">${s.visit_no}번째</td><td class="num">${fmtDur(s.dwell_sec)}</td><td class="l">${esc(s.last_milestone || '–')}</td><td>${({ mobile:'모바일', desktop:'PC', tablet:'태블릿' })[s.device] || '–'}</td></tr>`).join('')
   }</tbody></table></div>${shown < list.length ? `<div style="text-align:center;margin-top:12px"><button class="btn" id="moreSess">더 보기 (${list.length - shown}건)</button></div>` : ''}` : '<div class="empty">기록 없음</div>';
     const mb = $('#moreSess'); if (mb) mb.onclick = () => { shown += 40; drawSess(); }; };
   drawSess();
   wireToggles(view);
+  // 구간 분석은 따로 불러와서 그림 (오래 걸려도 위쪽은 먼저 보이게)
+  load(() => api().segments(id, r)).then(seg => renderSegments($('#cSeg'), seg, g)).catch(e => { const c = $('#cSeg .c-chart'); if (c) c.innerHTML = `<div class="empty">구간 분석을 불러오지 못했습니다. ${esc(e.message)}<br>Supabase 에 <code>supabase/players.sql</code> 이 실행됐는지 확인하세요.</div>`; });
 }
 
 function viewGuide() {
@@ -866,6 +966,230 @@ function viewGuide() {
   });
 }
 
+
+/* =====================================================================
+   플레이어 · 구간 분석
+   ===================================================================== */
+const ST = { done:'완주', active:'진행 중', idle:'휴면', gone:'이탈' };
+const ST_HELP = { done:'마지막 지점까지 도달', active:'최근 3일 안에 플레이', idle:'3–14일째 안 들어옴', gone:'14일 넘게 안 들어옴' };
+const finalOf = g => g.final ?? Math.max(...g.ms.map(m => m[0]));
+function statusOf(p, g) {
+  if (p.max_step != null && Number(p.max_step) >= finalOf(g)) return 'done';
+  const d = (Date.now() - Date.parse(p.last_seen)) / DAY;
+  return d <= 3 ? 'active' : d <= 14 ? 'idle' : 'gone';
+}
+const stHTML = k => `<span class="st ${k}" title="${ST_HELP[k]}"><i></i>${ST[k]}</span>`;
+const short = id => String(id).slice(0, 6);
+const segName = (sg, next) => next ? `${sg.name} → ${next.name}` : `${sg.name} 이후`;
+function ago(iso) {
+  const m = (Date.now() - Date.parse(iso)) / 60000;
+  if (m < 60) return Math.max(1, Math.round(m)) + '분 전';
+  if (m < 1440) return Math.round(m / 60) + '시간 전';
+  return Math.round(m / 1440) + '일 전';
+}
+function gapText(ms) {
+  const h = ms / 3600000;
+  if (h < 1) return Math.max(1, Math.round(ms / 60000)) + '분 뒤';
+  if (h < 24) return Math.round(h) + '시간 뒤';
+  const d = Math.floor(h / 24), rh = Math.round(h - d * 24);
+  return d + '일' + (rh ? ' ' + rh + '시간' : '') + ' 뒤';
+}
+function subtabs(g, on, n) {
+  const sl = slug(g.id);
+  return `<nav class="subtabs"><a href="#game-${sl}" class="${on === 'summary' ? 'on' : ''}">요약</a><a href="#players-${sl}" class="${on === 'players' ? 'on' : ''}">플레이어${n != null ? `<span class="cnt">${fmtN(n)}</span>` : ''}</a></nav>`;
+}
+// 마지막 구간 표시 방식: 완주 / 아직 진행 중 / 여기서 나감
+function lastKind(st) { return st === 'done' ? 'fin' : st === 'active' ? 'live' : 'exit'; }
+
+/* ---------- 구간 요약 (게임 요약 페이지 안) ---------- */
+function renderSegments(cardEl, seg, g) {
+  if (!cardEl) return;
+  const c = cardEl.querySelector('.c-chart'), tb = cardEl.querySelector('.c-table');
+  if (!seg.length) { c.innerHTML = '<div class="empty">아직 기록이 없습니다.</div>'; return; }
+  const fin = finalOf(g);
+  const rows = seg.map((sg, i) => ({ ...sg, next: seg[i + 1], isFinal: Number(sg.step) >= fin }));
+  const real = rows.filter(r => !r.isFinal);
+  const max = Math.max(...(real.length ? real : rows).map(r => Number(r.p90_sec || r.median_sec || 0)), 1);
+  const longest = real.reduce((a, r) => Number(r.median_sec) > Number(a?.median_sec ?? -1) ? r : a, null);
+  const leak = real.filter(r => r.entered >= 5).reduce((a, r) => (r.exited / r.entered) > (a ? a.exited / a.entered : -1) ? r : a, null);
+  c.innerHTML = `<div class="j-legend"><span><i style="background:var(--series-1)"></i>중앙값 (절반이 이보다 짧게 머묾)</span><span><i style="background:var(--seq-weak)"></i>상위 10% (오래 머문 사람)</span><span><i style="background:var(--series-2)"></i>여기서 나간 사람</span></div>
+    <div class="f-head" style="grid-template-columns:minmax(120px,210px) 1fr 92px 120px"><span>구간</span><span>머문 시간</span><span>들어옴 → 다음</span><span>여기서 나감</span></div>
+    ${rows.map((r, i) => `<div class="f-row" data-i="${i}" style="grid-template-columns:minmax(120px,210px) 1fr 92px 120px">
+      <div class="f-name" title="${esc(segName(r, r.next))}"><small>${r.step}</small>${esc(r.name)}${r.isFinal ? '' : ' →'}</div>
+      <div class="f-track"><div class="f-bar" style="width:${Math.min(100, Number(r.p90_sec || 0) / max * 100)}%;background:var(--seq-weak)"></div><div class="f-bar" style="width:${Math.min(100, Number(r.median_sec || 0) / max * 100)}%${r.isFinal ? ';background:var(--good)' : ''}"></div></div>
+      <div class="f-num">${fmtDur(r.median_sec)}<small>${fmtN(r.entered)}→${fmtN(r.moved_on)}</small></div>
+      ${r.isFinal ? `<div class="f-drop done">완주 ${fmtN(r.entered)}</div>` : `<div class="f-drop">${fmtN(r.exited)}<small style="color:var(--text-3);margin-left:2px">${pct(r.exited, r.entered)}%</small><span class="mini" style="width:${Math.max(1, r.exited / Math.max(1, ...real.map(x => x.exited)) * 36)}px"></span></div>`}
+    </div>`).join('')}
+    <div class="insight">${longest ? `가장 오래 머무는 구간은 <b>${esc(segName(longest, longest.next))}</b> (중앙값 ${fmtDur(longest.median_sec)}).` : ''}
+    ${leak ? ` 들어온 사람 대비 가장 많이 나가는 구간은 <b>${esc(segName(leak, leak.next))}</b>로 <b>${pct(leak.exited, leak.entered)}%</b>가 여기서 그만뒀고, 그 사람들은 나가기 전 중앙값 ${fmtDur(leak.median_exited_sec)} 머물렀습니다.` : ''}
+    <a href="#players-${slug(g.id)}">플레이어별로 보기 →</a></div>`;
+  c.querySelectorAll('.f-row').forEach(el => {
+    const r = rows[+el.dataset.i];
+    el.onpointermove = e => showTip(e, segName(r, r.next), [
+      { c:css('--series-1'), l:'머문 시간 중앙값', v:fmtDur(r.median_sec) },
+      { l:'평균', v:fmtDur(r.avg_sec) }, { l:'상위 10%', v:fmtDur(r.p90_sec) },
+      ...(r.isFinal ? [] : [{ l:'다음으로 간 사람', v:fmtN(r.moved_on) + '명 · ' + fmtDur(r.median_moved_sec) }, { c:css('--series-2'), l:'여기서 나간 사람', v:fmtN(r.exited) + '명 · ' + fmtDur(r.median_exited_sec) }])]);
+    el.onpointerleave = hideTip;
+  });
+  tb.innerHTML = tableHTML(['구간', '들어옴', '다음으로 감', '여기서 나감', '이탈률', '중앙값', '다음으로 간 사람 중앙값', '나간 사람 중앙값', '평균', '상위 10%'],
+    rows.map(r => [segName(r, r.next), fmtN(r.entered), fmtN(r.moved_on), fmtN(r.exited), r.isFinal ? '완주' : pct(r.exited, r.entered) + '%', fmtDur(r.median_sec), fmtDur(r.median_moved_sec), fmtDur(r.median_exited_sec), fmtDur(r.avg_sec), fmtDur(r.p90_sec)]));
+}
+
+/* ---------- 플레이어 목록 ---------- */
+const PV = { q:'', st:'all', sort:'last_seen', page:0 };
+let PV_game = null;
+async function viewPlayers(id) {
+  if (PV_game !== id) { PV.q = ''; PV.st = 'all'; PV.page = 0; PV_game = id; }
+  const g = GAME_BY_ID[id]; if (!g) { location.hash = 'overview'; return; }
+  const r = range(state.days);
+  setTitle(g.name + ' · 플레이어', rangeLabel(r) + ' 에 접속한 사람 · 기록은 처음 접속부터 전부');
+  view.innerHTML = subtabs(g, 'players') + '<div class="empty">불러오는 중…</div>';
+  const list = (await load(() => api().players(id, r))).map(p => ({ ...p, total_ms:Number(p.total_ms) || 0, sessions:Number(p.sessions), last_segment_ms:Number(p.last_segment_ms) || 0, status:statusOf(p, g) }));
+  const cnt = { all:list.length, done:0, active:0, idle:0, gone:0 }; list.forEach(p => cnt[p.status]++);
+  const tot = list.reduce((a, p) => a + p.total_ms, 0);
+  const med = a => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y), m = s.length / 2; return s.length % 2 ? s[m | 0] : (s[m - 1] + s[m]) / 2; };
+  view.innerHTML = subtabs(g, 'players', list.length) + `
+    <div class="kpis">
+      <div class="kpi"><div class="l">플레이어</div><div class="v">${fmtN(list.length)}</div><div class="d">완주 ${fmtN(cnt.done)} · 진행 중 ${fmtN(cnt.active)}</div></div>
+      <div class="kpi"><div class="l">1인당 총 플레이 (중앙값)</div><div class="v">${fmtDur(med(list.map(p => p.total_ms)) / 1000)}</div><div class="d">합계 ${fmtN(Math.round(tot / 3600000 * 10) / 10)}시간</div></div>
+      <div class="kpi"><div class="l">이탈 · 휴면</div><div class="v">${fmtN(cnt.gone + cnt.idle)}</div><div class="d">14일 넘게 안 옴 ${fmtN(cnt.gone)} · 3–14일 ${fmtN(cnt.idle)}</div></div>
+      <div class="kpi"><div class="l">나가기 전 마지막 구간 (중앙값)</div><div class="v">${fmtDur(med(list.filter(p => p.status === 'gone' || p.status === 'idle').map(p => p.last_segment_ms)) / 1000)}</div><div class="d">이탈·휴면한 사람 기준</div></div>
+    </div>
+    <section class="card">
+      <div class="filters">
+        <input id="pq" placeholder="ID 검색" value="${esc(PV.q)}" aria-label="플레이어 ID 검색">
+        ${['all', 'active', 'done', 'idle', 'gone'].map(k => `<button class="chip ${PV.st === k ? 'on' : ''}" data-st="${k}" title="${ST_HELP[k] || ''}">${k === 'all' ? '전체' : ST[k]}<span class="n">${fmtN(cnt[k])}</span></button>`).join('')}
+        <span style="flex:1"></span>
+        <select id="psort" aria-label="정렬">
+          ${[['last_seen', '최근 방문순'], ['total_ms', '총 플레이 긴 순'], ['max_step', '많이 진행한 순'], ['sessions', '접속 많은 순'], ['last_segment_ms', '마지막 구간 오래 머문 순'], ['first_seen', '처음 온 순']].map(([k, l]) => `<option value="${k}" ${PV.sort === k ? 'selected' : ''}>${l}</option>`).join('')}
+        </select>
+      </div>
+      <div class="j-legend"><span><i style="background:var(--series-1)"></i>지나간 구간 (길이 = 그 구간에서 플레이한 시간)</span><span><i style="background:var(--series-2)"></i>여기서 나감</span><span><i style="background:repeating-linear-gradient(135deg,var(--series-1) 0 3px,transparent 3px 6px);border:1px solid var(--series-1)"></i>지금 하는 중</span><span><i style="background:var(--good)"></i>완주</span></div>
+      <div id="ptable"></div>
+    </section>`;
+  const draw = () => {
+    const q = PV.q.trim().toLowerCase();
+    let rows = list.filter(p => (PV.st === 'all' || p.status === PV.st) && (!q || String(p.visitor_id).toLowerCase().includes(q)));
+    const k = PV.sort;
+    rows.sort((a, b) => k === 'first_seen' ? Date.parse(a.first_seen) - Date.parse(b.first_seen) : k === 'last_seen' ? Date.parse(b.last_seen) - Date.parse(a.last_seen) : (Number(b[k] ?? -1) - Number(a[k] ?? -1)));
+    const per = 50, pages = Math.max(1, Math.ceil(rows.length / per)); PV.page = Math.min(PV.page, pages - 1);
+    const page = rows.slice(PV.page * per, PV.page * per + per);
+    const maxT = Math.max(1, ...page.map(p => p.total_ms));
+    $('#ptable').innerHTML = rows.length ? `<div class="tbl-wrap"><table><thead><tr><th>플레이어</th><th style="text-align:left">상태</th><th>첫 방문</th><th>마지막 방문</th><th>접속</th><th>총 플레이</th><th style="text-align:left">최종 지점</th><th>마지막 구간</th><th style="text-align:left;min-width:260px">여정</th></tr></thead><tbody>${
+      page.map((p, i) => {
+        const segs = p.segments || [], lk = lastKind(p.status);
+        return `<tr class="click" data-id="${esc(p.visitor_id)}">
+          <td class="l"><a class="pid" href="#player-${slug(g.id)}--${esc(p.visitor_id)}">${short(p.visitor_id)}</a></td>
+          <td class="l">${stHTML(p.status)}</td>
+          <td class="num">${fmtTime(p.first_seen)}</td><td class="num" title="${fmtTime(p.last_seen)}">${ago(p.last_seen)}</td>
+          <td class="num">${fmtN(p.sessions)}</td><td class="num">${fmtDur(p.total_ms / 1000)}</td>
+          <td class="l">${esc(p.last_milestone || '시작 전')}</td>
+          <td class="num">${fmtDur(p.last_segment_ms / 1000)}</td>
+          <td class="l"><div class="journey" style="width:${Math.max(6, p.total_ms / maxT * 100)}%" data-p="${PV.page * per + i}">${segs.map((sg, j) => `<span data-j="${j}" class="${j === segs.length - 1 ? lk : ''}" style="flex:${Math.max(Number(sg.ms), 1)} 1 0"></span>`).join('')}</div></td>
+        </tr>`; }).join('')}</tbody></table></div>
+      <div class="pager">${PV.page > 0 ? '<button class="btn" id="pprev">이전</button>' : ''}<span>${PV.page * per + 1}–${Math.min(rows.length, PV.page * per + per)} / ${fmtN(rows.length)}명</span>${PV.page < pages - 1 ? '<button class="btn" id="pnext">다음</button>' : ''}</div>`
+      : '<div class="empty">조건에 맞는 플레이어가 없습니다.</div>';
+    $('#ptable').querySelectorAll('tr.click').forEach(tr => tr.onclick = e => { if (e.target.closest('a')) return; location.hash = `player-${slug(g.id)}--${tr.dataset.id}`; });
+    $('#ptable').querySelectorAll('.journey span').forEach(sp => {
+      sp.onpointermove = e => {
+        const p = rows[+sp.parentElement.dataset.p], segs = p.segments, j = +sp.dataset.j, sg = segs[j], last = j === segs.length - 1;
+        showTip(e, segName(sg, segs[j + 1]), [{ c:last ? (p.status === 'done' ? css('--good') : p.status === 'active' ? css('--series-1') : css('--series-2')) : css('--series-1'), l:'머문 시간', v:fmtDur(sg.ms / 1000) },
+          { l:'도착 시점 (누적)', v:fmtDur(sg.at_ms / 1000) }, { l:'', v:last ? (p.status === 'done' ? '완주' : p.status === 'active' ? '지금 여기 진행 중' : '여기서 나감') : '다음 지점으로 감' }]);
+      };
+      sp.onpointerleave = hideTip;
+    });
+    const pp = $('#pprev'), pn = $('#pnext');
+    if (pp) pp.onclick = () => { PV.page--; draw(); }; if (pn) pn.onclick = () => { PV.page++; draw(); };
+  };
+  draw();
+  $('#pq').oninput = e => { PV.q = e.target.value; PV.page = 0; draw(); };
+  $('#psort').onchange = e => { PV.sort = e.target.value; PV.page = 0; draw(); };
+  view.querySelectorAll('.chip').forEach(b => b.onclick = () => { PV.st = b.dataset.st; PV.page = 0; view.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === b)); draw(); });
+}
+
+/* ---------- 플레이어 한 명 ---------- */
+async function viewPlayer(id, vid) {
+  const g = GAME_BY_ID[id]; if (!g) { location.hash = 'overview'; return; }
+  const sl = slug(g.id);
+  setTitle(`플레이어 ${short(vid)}`, `${esc(g.name)} · ID <span class="num">${esc(vid)}</span>`);
+  view.innerHTML = '<div class="empty">불러오는 중…</div>';
+  const [d, segAll] = await Promise.all([load(() => api().playerDetail(id, vid)), load(() => api().segments(id, range(state.days)))]);
+  const ss = d.sessions || [], ms = d.milestones || [];
+  if (!ss.length) { view.innerHTML = `<a class="back" href="#players-${sl}">← 플레이어 목록</a><div class="card"><div class="empty">이 플레이어 기록을 찾지 못했습니다.</div></div>`; return; }
+  const total = Number(d.total_ms) || 0;
+  // 구간 계산 (지점마다 첫 도달)
+  const first = {}; ms.forEach(m => { if (!(m.step in first) || m.total_ms < first[m.step].t) first[m.step] = { step:m.step, name:m.name, t:Number(m.total_ms), at:m.at }; });
+  const pts = [{ step:0, name:'접속', t:0, at:ss[0].started_at }, ...Object.values(first)].sort((a, b) => a.t - b.t || a.step - b.step);
+  const segs = pts.map((p, i) => ({ ...p, ms:Math.max(0, (i < pts.length - 1 ? pts[i + 1].t : total) - p.t), next:pts[i + 1], exit:i === pts.length - 1 }));
+  const maxStep = ms.length ? Math.max(...ms.map(m => m.step)) : null;
+  const lastMs = ms.length ? [...ms].sort((a, b) => b.total_ms - a.total_ms)[0] : null;
+  const lastSeen = ss.reduce((a, s) => s.last_seen_at > a ? s.last_seen_at : a, ss[0].last_seen_at);
+  const st = statusOf({ max_step:maxStep, last_seen:lastSeen }, g), lk = lastKind(st);
+  const medBy = Object.fromEntries((segAll || []).map(x => [x.step, Number(x.median_sec) * 1000]));
+  const devs = [...new Set(ss.map(s => s.device).filter(Boolean))].map(x => ({ mobile:'모바일', desktop:'PC', tablet:'태블릿' })[x] || x).join(', ');
+  const refs = [...new Set(ss.map(s => s.referrer).filter(Boolean))];
+  const lastSeg = segs[segs.length - 1];
+  const fin = finalOf(g);
+  const longestSeg = segs.filter(x => !x.exit || st !== 'done').reduce((a, x) => x.ms > (a?.ms ?? -1) ? x : a, null);
+
+  view.innerHTML = `<a class="back" href="#players-${sl}">← ${esc(g.name)} 플레이어 목록</a>
+    <div class="kpis">
+      <div class="kpi"><div class="l">상태</div><div class="v" style="font-size:20px;font-family:var(--sans)">${stHTML(st)}</div><div class="d">${ST_HELP[st]} · ${devs || '기기 정보 없음'}</div></div>
+      <div class="kpi"><div class="l">총 플레이</div><div class="v">${fmtDur(total / 1000)}</div><div class="d">접속 ${ss.length}회 · 1회 평균 ${fmtDur(total / ss.length / 1000)}</div></div>
+      <div class="kpi"><div class="l">첫 방문 → 마지막 방문</div><div class="v" style="font-size:19px">${fmtTime(ss[0].started_at)}</div><div class="d">마지막 ${fmtTime(lastSeen)} (${ago(lastSeen)})</div></div>
+      <div class="kpi"><div class="l">최종 도달 지점</div><div class="v" style="font-size:20px;font-family:var(--sans)">${esc(lastMs ? lastMs.name : '시작 전')}</div><div class="d">${maxStep != null ? `step ${maxStep} / 마지막 ${fin}` : '마일스톤 기록 없음'}</div></div>
+      <div class="kpi"><div class="l">${st === 'done' ? '완주 후 더 플레이' : st === 'active' ? '지금 구간에서 플레이 중' : '나가기 전 마지막 구간'}</div><div class="v">${fmtDur(lastSeg.ms / 1000)}</div><div class="d">${esc(segName(lastSeg, null))}</div></div>
+    </div>
+    ${refs.length ? `<div class="banner"><span>↗</span><div>들어온 경로: ${refs.map(x => `<span class="num">${esc(x)}</span>`).join(', ')}</div></div>` : ''}
+    <section class="card"><div class="card-h"><div style="flex:1"><h2>구간별로 머문 시간</h2><p>막대 = 이 사람이 그 구간에서 플레이한 시간 · 세로선 = 같은 기간 전체 플레이어 중앙값</p></div></div>
+      <div class="j-legend"><span><i style="background:var(--series-1)"></i>지나간 구간</span><span><i style="background:${lk === 'exit' ? 'var(--series-2)' : lk === 'fin' ? 'var(--good)' : 'var(--series-1)'}"></i>${lk === 'exit' ? '여기서 나감' : lk === 'fin' ? '완주' : '지금 진행 중'}</span><span><i style="background:var(--text);opacity:.55;width:3px"></i>전체 중앙값</span></div>
+      <div id="pseg"></div>
+      <div class="insight">${longestSeg ? `가장 오래 머문 구간은 <b>${esc(segName(longestSeg, longestSeg.next))}</b> (${fmtDur(longestSeg.ms / 1000)})${medBy[longestSeg.step] ? `, 전체 중앙값의 <b>${(longestSeg.ms / medBy[longestSeg.step]).toFixed(1)}배</b>` : ''}입니다.` : ''}
+      ${st === 'gone' || st === 'idle' ? ` <b>${esc(lastSeg.name)}</b>에 도착한 뒤 ${fmtDur(lastSeg.ms / 1000)} 플레이하고 ${ago(lastSeen)} 마지막으로 나갔습니다.` : ''}</div>
+    </section>
+    <section class="card"><div class="card-h"><div style="flex:1"><h2>접속 타임라인</h2><p>막대 길이 = 그 접속에서 실제 플레이한 시간 · 눈금 = 그때 밟은 마일스톤</p></div></div><div id="ptl"></div></section>
+    <section class="card"><div class="card-h"><div style="flex:1"><h2>마일스톤 기록 전체</h2><p>시간순 · 같은 지점을 다시 밟은 기록도 모두 표시</p></div></div><div id="plog"></div></section>`;
+
+  // 구간 막대
+  const maxMs = Math.max(1, ...segs.map(x => Math.max(x.ms, medBy[x.step] || 0)));
+  $('#pseg').innerHTML = segs.map((x, i) => {
+    const med = medBy[x.step], ratio = med ? x.ms / med : null, cls = x.exit ? (lk === 'exit' ? 'exit' : lk === 'live' ? 'live' : '') : '';
+    return `<div class="seg-row" data-i="${i}">
+      <div class="nm" title="${esc(segName(x, x.next))}">${esc(x.name)}${x.next ? ' → ' + esc(x.next.name) : ''}<small>${x.exit ? (lk === 'exit' ? '여기서 나감' : lk === 'live' ? '지금 여기' : '완주 이후') : '도착 ' + fmtTime(x.at)}</small></div>
+      <div class="seg-track"><div class="seg-bar ${cls}" style="width:${x.ms / maxMs * 100}%;${x.exit && lk === 'fin' ? 'background:var(--good)' : ''}"></div>${med ? `<div class="seg-med" style="left:${med / maxMs * 100}%"></div>` : ''}</div>
+      <div class="seg-val">${fmtDur(x.ms / 1000)}<small>${ratio != null ? (ratio >= 1 ? `중앙값의 ${ratio.toFixed(1)}배` : `중앙값보다 ${Math.round((1 - ratio) * 100)}% 짧음`) : '비교 자료 없음'}</small></div>
+    </div>`; }).join('');
+  $('#pseg').querySelectorAll('.seg-row').forEach(el => {
+    const x = segs[+el.dataset.i];
+    el.onpointermove = e => showTip(e, segName(x, x.next), [{ c:css('--series-1'), l:'이 플레이어', v:fmtDur(x.ms / 1000) }, { l:'전체 중앙값', v:medBy[x.step] ? fmtDur(medBy[x.step] / 1000) : '–' }, { l:'도착 (누적 플레이)', v:fmtDur(x.t / 1000) }]);
+    el.onpointerleave = hideTip;
+  });
+
+  // 타임라인
+  const maxD = Math.max(1, ...ss.map(s => Number(s.dwell_ms) || 0));
+  $('#ptl').innerHTML = ss.map((s, i) => {
+    const sm = ms.filter(m => m.session_id === s.session_id), dw = Number(s.dwell_ms) || 0;
+    const gap = i ? Date.parse(s.started_at) - Date.parse(ss[i - 1].last_seen_at) : 0;
+    return `${i ? `<div class="gap">⋯ ${gapText(gap)} 다시 접속 ⋯</div>` : ''}<div class="sess">
+      <div class="sess-h"><b>#${i + 1}</b> ${fmtTime(s.started_at)} <span>${({ mobile:'모바일', desktop:'PC', tablet:'태블릿' })[s.device] || ''}</span><span>플레이 ${fmtDur(dw / 1000)}</span>${sm.length ? `<span>마일스톤 ${sm.length}개</span>` : '<span>새 마일스톤 없음</span>'}${i === ss.length - 1 && (st === 'gone' || st === 'idle') ? '<span style="color:var(--series-2)">← 마지막 접속</span>' : ''}</div>
+      <div class="sess-bar" style="width:${Math.max(4, dw / maxD * 100)}%"><div class="sess-fill" style="width:100%"></div>${sm.map((m, j) => `<span class="sess-tick" data-s="${i}" data-m="${j}" style="left:${dw ? Math.min(100, m.elapsed_ms / dw * 100) : 0}%"></span>`).join('')}</div>
+      ${sm.length ? `<div class="chips">${sm.map(m => `<span class="mchip"><b>${esc(m.name)}</b><small>+${fmtDur(m.elapsed_ms / 1000)}</small></span>`).join('')}</div>` : ''}
+    </div>`; }).join('');
+  $('#ptl').querySelectorAll('.sess-tick').forEach(t => {
+    const s = ss[+t.dataset.s], m = ms.filter(x => x.session_id === s.session_id)[+t.dataset.m];
+    t.onpointermove = e => showTip(e, m.name, [{ l:'이번 접속 후', v:fmtDur(m.elapsed_ms / 1000) }, { l:'누적 플레이', v:fmtDur(m.total_ms / 1000) }, { l:'시각', v:fmtTime(m.at) }]);
+    t.onpointerleave = hideTip;
+  });
+
+  // 로그
+  const sNo = Object.fromEntries(ss.map((s, i) => [s.session_id, i + 1]));
+  let prevT = 0;
+  $('#plog').innerHTML = ms.length ? `<div class="tbl-wrap"><table><thead><tr><th>시각</th><th>접속</th><th style="text-align:left">지점</th><th>step</th><th>접속 후 경과</th><th>누적 플레이</th><th>앞 기록부터</th></tr></thead><tbody>${
+    ms.map(m => { const dlt = Number(m.total_ms) - prevT; prevT = Number(m.total_ms);
+      return `<tr><td class="l num">${fmtTime(m.at)}</td><td class="num">#${sNo[m.session_id] || '–'}</td><td class="l">${esc(m.name)}</td><td class="num">${m.step}</td><td class="num">${fmtDur(m.elapsed_ms / 1000)}</td><td class="num">${fmtDur(m.total_ms / 1000)}</td><td class="num">${fmtDur(dlt / 1000)}</td></tr>`; }).join('')
+  }</tbody></table></div>` : '<div class="empty">마일스톤 기록이 없습니다. 첫 지점에 가기 전에 나갔습니다.</div>';
+}
+
 /* =====================================================================
    라우팅
    ===================================================================== */
@@ -879,6 +1203,8 @@ async function route() {
   try {
     if (h === 'guide') viewGuide();
     else if (h.startsWith('game-')) await viewGame(unslug(h.slice(5)));
+    else if (h.startsWith('players-')) await viewPlayers(unslug(h.slice(8)));
+    else if (h.startsWith('player-') && h.includes('--')) { const [gs, v] = h.slice(7).split('--'); await viewPlayer(unslug(gs), v); }
     else await viewOverview();
   } catch (e) {
     if (seq === renderSeq) view.innerHTML = `<div class="card"><div class="empty">데이터를 불러오지 못했습니다.<br>${esc(state.liveError || e.message)}<br><br><button class="btn" onclick="openModal()">연결 설정 열기</button> <button class="btn" onclick="useDemo()">데모 데이터로 보기</button></div></div>`;

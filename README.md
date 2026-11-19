@@ -14,7 +14,7 @@ game-analytics/
 ## 설치 (약 15분)
 
 1. **Supabase** 무료 프로젝트 생성 (지역: Seoul)
-2. SQL Editor → `supabase/schema.sql` 전체 붙여넣고 **Run**
+2. SQL Editor → `supabase/schema.sql` 전체 붙여넣고 **Run**, 이어서 `supabase/players.sql` 도 **Run** (플레이어·구간 분석)
 3. Authentication → Users → **Add user** 로 내 계정 생성 후 SQL Editor 에서
    ```sql
    insert into public.admins (user_id)
@@ -37,6 +37,8 @@ game-analytics/
 | 체류시간 | 화면을 보고 있고 90초 안에 조작이 있었던 시간만 합산 (켜두고 자리 비움은 제외) |
 | 마일스톤 도달 | `GameTracker.milestone('이름', step)` 을 밟은 사람 수 |
 | 여기서 멈춤 | 기간 중 그 사람이 마지막으로 도달한 지점 = 이탈 지점 |
+| 구간 | 한 지점에 처음 도착 ~ 다음 지점에 처음 도착까지 실제 플레이 시간 (누적 플레이 기준이라 여러 번 나눠 접속해도 이어짐) |
+| 플레이어 상태 | 완주 = 마지막 지점 도달 · 진행 중 = 3일 안에 플레이 · 휴면 = 3–14일 · 이탈 = 14일 넘게 안 옴 |
 
 ## 보안
 
