@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>게임 분석실</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f4f3ef; --surface:#fcfcfb; --surface-2:#f0efea; --line:#e3e1da; --line-strong:#cfccc2;
+  --text:#0b0b0b; --text-2:#52514e; --text-3:#7d7b74;
+  --series-1:#2a78d6; --series-2:#eb6834; --seq-weak:#cde2fb;
+  --accent:#1f2a44; --good:#0f7a3d; --bad:#c2362f;
+  --radius:10px; --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --sans:'IBM Plex Sans KR',system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme: dark;
+    --bg:#111110; --surface:#1a1a19; --surface-2:#232321; --line:#2e2e2b; --line-strong:#3d3d39;
+    --text:#f0efec; --text-2:#c3c2b7; --text-3:#8f8e86;
+    --series-1:#3987e5; --series-2:#d95926; --seq-weak:#1c3557;
+    --accent:#e6e4dc; --good:#3fbf74; --bad:#ef6b63;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#111110; --surface:#1a1a19; --surface-2:#232321; --line:#2e2e2b; --line-strong:#3d3d39;
+  --text:#f0efec; --text-2:#c3c2b7; --text-3:#8f8e86;
+  --series-1:#3987e5; --series-2:#d95926; --seq-weak:#1c3557;
+  --accent:#e6e4dc; --good:#3fbf74; --bad:#ef6b63;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--series-1)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* ---------- layout ---------- */
+.app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
+aside{border-right:1px solid var(--line);background:var(--surface);padding:20px 14px;position:sticky;top:0;height:100vh;overflow:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px 18px}
+.brand-mark{width:30px;height:30px;border-radius:8px;background:var(--accent);display:grid;place-items:center}
+.brand-mark svg{width:18px;height:18px}
+.brand b{font-size:16px;letter-spacing:-.01em}
+.brand small{display:block;color:var(--text-3);font-size:11.5px;margin-top:-2px}
+.nav-label{font-size:11px;font-weight:600;color:var(--text-3);letter-spacing:.06em;padding:14px 10px 6px}
+.nav a{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 10px;border-radius:7px;color:var(--text-2);text-decoration:none;font-size:13.5px}
+.nav a:hover{background:var(--surface-2);color:var(--text)}
+.nav a.on{background:var(--surface-2);color:var(--text);font-weight:600;box-shadow:inset 2px 0 0 var(--series-1)}
+.nav a .cnt{font-family:var(--mono);font-size:11.5px;color:var(--text-3)}
+.nav a .tag{font-size:10.5px;color:var(--text-3);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+main{padding:22px 28px 60px;min-width:0}
+.topbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.topbar h1{font-size:21px;margin:0;letter-spacing:-.02em;flex:1;min-width:200px}
+.topbar h1 small{display:block;font-size:12.5px;font-weight:400;color:var(--text-3);letter-spacing:0;margin-top:2px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:2px}
+.seg button{border:0;background:none;padding:5px 11px;border-radius:6px;cursor:pointer;color:var(--text-2);font-size:13px}
+.seg button.on{background:var(--surface-2);color:var(--text);font-weight:600}
+.btn{border:1px solid var(--line-strong);background:var(--surface);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:13px}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:4px 10px;border-radius:99px;border:1px solid var(--line);background:var(--surface);color:var(--text-2);cursor:pointer}
+.pill i{width:7px;height:7px;border-radius:50%;background:var(--text-3)}
+.pill.live i{background:var(--good)}
+.pill.err i{background:var(--bad)}
+.banner{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);padding:11px 14px;margin-bottom:16px;font-size:13px;color:var(--text-2);display:flex;gap:10px;align-items:flex-start}
+.banner b{color:var(--text)}
+.banner.err{border-color:color-mix(in srgb,var(--bad) 45%,var(--line))}
+
+/* ---------- cards ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.kpi .l{font-size:12.5px;color:var(--text-2)}
+.kpi .v{font-family:var(--mono);font-size:26px;font-weight:500;letter-spacing:-.02em;margin-top:4px;line-height:1.15}
+.kpi .v small{font-size:14px;color:var(--text-2);margin-left:2px}
+.kpi .d{font-size:12px;color:var(--text-3);margin-top:4px}
+.kpi .d .up{color:var(--good)} .kpi .d .down{color:var(--bad)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px;min-width:0}
+.card-h{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+.card-h h2{font-size:14.5px;margin:0;flex:1}
+.card-h p{margin:2px 0 0;font-size:12.5px;color:var(--text-3);font-weight:400}
+.card-h .tbl-toggle{font-size:12px;border:0;background:none;color:var(--text-3);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--text-2);margin:-4px 0 8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:3px;border-radius:2px;display:inline-block}
+.empty{color:var(--text-3);font-size:13px;padding:28px 0;text-align:center}
+
+/* ---------- tables ---------- */
+.tbl-wrap{overflow:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{font-weight:500;color:var(--text-3);font-size:12px;text-align:right;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:default}
+th.sortable{cursor:pointer} th.sortable:hover{color:var(--text)}
+th:first-child,td:first-child{text-align:left}
+td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+td.num{font-size:12.5px}
+td.l{text-align:left}
+tr.click{cursor:pointer} tr.click:hover td{background:var(--surface-2)}
+.gname{font-weight:600} .gname small{display:block;font-weight:400;color:var(--text-3);font-size:11.5px}
+.drop-tag{display:inline-block;max-width:170px;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom;color:var(--text-2)}
+
+/* ---------- charts ---------- */
+.chart{position:relative;width:100%}
+.chart svg{display:block;width:100%;overflow:visible}
+.chart .grid line{stroke:var(--line);stroke-width:1}
+.chart .axis text{fill:var(--text-3);font-size:11px;font-family:var(--mono)}
+.tip{position:fixed;pointer-events:none;z-index:50;background:var(--surface);border:1px solid var(--line-strong);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 6px 24px rgba(0,0,0,.12);min-width:130px;opacity:0;transition:opacity .08s}
+.tip.show{opacity:1}
+.tip .t{color:var(--text-3);margin-bottom:4px;font-size:11.5px}
+.tip .r{display:flex;align-items:center;gap:7px;justify-content:space-between}
+.tip .r span{display:inline-flex;align-items:center;gap:6px;color:var(--text-2)}
+.tip .r i{width:8px;height:8px;border-radius:2px}
+.tip .r b{font-family:var(--mono);font-weight:500}
+
+/* funnel */
+.funnel{display:flex;flex-direction:column;gap:2px}
+.f-row{display:grid;grid-template-columns:minmax(110px,200px) 1fr 92px 108px;gap:12px;align-items:center;padding:5px 4px;border-radius:6px}
+.f-row:hover{background:var(--surface-2)}
+.f-name{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.f-name small{color:var(--text-3);font-family:var(--mono);margin-right:6px;font-size:11px}
+.f-track{height:18px;position:relative}
+.f-bar{position:absolute;left:0;top:0;bottom:0;background:var(--series-1);border-radius:0 4px 4px 0;min-width:2px}
+.f-num{font-family:var(--mono);font-size:12.5px;text-align:right}
+.f-num small{color:var(--text-3);margin-left:4px}
+.f-drop{font-family:var(--mono);font-size:12.5px;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:7px}
+.f-drop .mini{height:8px;background:var(--series-2);border-radius:0 3px 3px 0;min-width:1px}
+.f-drop.done{color:var(--good)}
+.f-head{display:grid;grid-template-columns:minmax(110px,200px) 1fr 92px 108px;gap:12px;font-size:11.5px;color:var(--text-3);padding:0 4px 6px;border-bottom:1px solid var(--line);margin-bottom:4px}
+.f-head span:nth-child(n+3){text-align:right}
+.insight{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--surface-2);font-size:13px;color:var(--text-2)}
+.insight b{color:var(--text)}
+
+/* ---------- guide ---------- */
+.steps{counter-reset:s;display:flex;flex-direction:column;gap:12px}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px 16px 56px;position:relative}
+.step:before{counter-increment:s;content:counter(s);position:absolute;left:16px;top:15px;width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--surface);display:grid;place-items:center;font-weight:600;font-size:13px;font-family:var(--mono)}
+.step h3{margin:0 0 6px;font-size:14.5px}
+.step p,.step li{color:var(--text-2);font-size:13px;margin:4px 0}
+.step ul{padding-left:18px;margin:6px 0}
+pre{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;overflow:auto;font-family:var(--mono);font-size:12px;line-height:1.55;margin:8px 0;position:relative;white-space:pre}
+.copy{position:absolute;right:6px;top:6px;font-size:11px;padding:2px 8px;border-radius:5px;border:1px solid var(--line-strong);background:var(--surface);cursor:pointer;font-family:var(--sans)}
+code{font-family:var(--mono);font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:4px}
+.gcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;margin-bottom:12px}
+.gcard h3{margin:0;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.gcard .meta{font-size:12px;color:var(--text-3);margin:2px 0 8px}
+.ms-table td,.ms-table th{text-align:left;font-size:12.5px;white-space:normal}
+.ms-table td:first-child{font-family:var(--mono);width:50px}
+
+/* ---------- modal ---------- */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:40;padding:16px}
+.modal-bg.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--line);border-radius:14px;width:min(460px,100%);padding:20px 22px;max-height:90vh;overflow:auto}
+.modal h2{margin:0 0 4px;font-size:17px}
+.modal p{color:var(--text-2);font-size:13px;margin:0 0 14px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:12.5px;color:var(--text-2);margin-bottom:4px}
+.field input{width:100%;border:1px solid var(--line-strong);background:var(--bg);border-radius:8px;padding:8px 10px;font-size:13.5px}
+.field input:focus{outline:2px solid var(--series-1);outline-offset:-1px}
+.modal .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+.msg{font-size:12.5px;margin-top:6px;min-height:18px}
+.msg.err{color:var(--bad)} .msg.ok{color:var(--good)}
+.hr{height:1px;background:var(--line);margin:14px 0}
+
+.menu-btn{display:none}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  aside{position:fixed;inset:0 auto 0 0;width:260px;z-index:30;transform:translateX(-100%);transition:transform .2s;box-shadow:0 0 40px rgba(0,0,0,.2)}
+  aside.open{transform:none}
+  .menu-btn{display:inline-flex}
+  main{padding:16px 14px 50px}
+  .grid2{grid-template-columns:1fr}
+  .f-row,.f-head{grid-template-columns:96px 1fr 70px 84px;gap:8px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside id="side">
+    <div class="brand">
+      <div class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="var(--surface)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg></div>
+      <div><b>게임 분석실</b><small>방문 · 체류 · 이탈</small></div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <button class="btn menu-btn" id="menuBtn" aria-label="메뉴">☰</button>
+      <h1 id="title">전체 개요<small></small></h1>
+      <div class="seg" id="range" role="group" aria-label="기간">
+        <button data-d="7">7일</button><button data-d="14" class="on">14일</button><button data-d="30">30일</button><button data-d="90">90일</button>
+      </div>
+      <button class="pill" id="connPill" title="DB 연결 설정"><i></i><span>데모 데이터</span></button>
+    </div>
+    <div id="banner"></div>
+    <div id="view"></div>
+  </main>
+</div>
+
+<div class="tip" id="tip"></div>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal" role="dialog" aria-labelledby="mTitle">
+    <h2 id="mTitle">DB 연결</h2>
+    <p>Supabase 프로젝트 주소와 공개 키를 넣고, 관리자 계정으로 로그인하세요. 값은 이 브라우저에만 저장됩니다.</p>
+    <div class="field"><label for="fUrl">Project URL</label><input id="fUrl" placeholder="https://abcdxyz.supabase.co" autocomplete="off"></div>
+    <div class="field"><label for="fKey">Publishable key (또는 anon key)</label><input id="fKey" placeholder="sb_publishable_…" autocomplete="off"></div>
+    <div class="hr"></div>
+    <div class="field"><label for="fEmail">관리자 이메일</label><input id="fEmail" type="email" autocomplete="username"></div>
+    <div class="field"><label for="fPw">비밀번호</label><input id="fPw" type="password" autocomplete="current-password"></div>
+    <div class="msg" id="mMsg"></div>
+    <div class="row">
+      <button class="btn" id="mDemo">데모 데이터로 보기</button>
+      <button class="btn" id="mLogout">로그아웃</button>
+      <button class="btn" id="mClose">닫기</button>
+      <button class="btn primary" id="mLogin">연결하기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* =====================================================================
+   게임 목록 + 추천 마일스톤 (설치 가이드와 데모 데이터가 같이 씀)
+   ===================================================================== */
+const GAMES = [
+  { id:'waiting', name:'웨이팅 이상현상', url:'https://taehyun1221s.github.io/waiting/', engine:'HTML 단일 파일',
+    file:'index.html',
+    ms:[[1,'챕터 1 시작',"startChapter(ch, mode) 맨 앞 (ch===1, 스토리 모드)"],
+        [2,'챕터 2 시작',"startChapter(ch, mode) 맨 앞 (ch===2)"],
+        [3,'클리어',"showClear() 맨 앞"],
+        [4,'무한 모드 시작',"startChapter(ch, mode) 맨 앞 (mode==='endless')"]],
+    code:`// startChapter(ch, mode) 함수 첫 줄에
+if (mode === 'endless') GameTracker.milestone('무한 모드 시작', 4);
+else GameTracker.milestone('챕터 ' + ch + ' 시작', ch);
+
+// showClear() 함수 첫 줄에
+GameTracker.milestone('클리어', 3);` },
+  { id:'flip_it_all', name:'다 세워버려', url:'https://taehyun1221s.github.io/flip_it_all/', engine:'HTML 단일 파일',
+    file:'index.html',
+    ms:[...Array.from({length:25},(_,i)=>[i+1,'스테이지 '+(i+1),i===0?'startLevel(idx) 맨 앞 (idx는 0부터)':'']),[26,'엔딩','startEnding() 맨 앞']],
+    code:`// startLevel(idx) 함수 첫 줄에  (idx 0 = 스테이지 1)
+GameTracker.milestone('스테이지 ' + (idx + 1), idx + 1);
+
+// startEnding() 함수 첫 줄에
+GameTracker.milestone('엔딩', 26);` },
+  { id:'seller_of_the_border', name:'국경의 장사꾼', url:'https://sunny8197783.github.io/SellerOfTheBorder/', engine:'HTML 단일 파일',
+    file:'index.html',
+    ms:[[1,'게임 시작','startGame()'],[2,'1일차','showDay() — G.day 0부터'],[3,'2일차',''],[4,'3일차',''],[5,'4일차',''],[6,'5일차',''],[7,'6일차',''],[8,'7일차',''],[99,'엔딩','showEnd(kind) — 엔딩 종류는 이름에']],
+    code:`// startGame() 첫 줄에
+GameTracker.milestone('게임 시작', 1);
+
+// showDay() 첫 줄에  (G.day 는 0부터 → 1일차)
+GameTracker.milestone((G.day + 1) + '일차', G.day + 2);
+
+// showEnd(kind) 첫 줄에  (모든 엔딩은 같은 step, 이름으로 구분)
+GameTracker.milestone('엔딩: ' + ENDINGS[kind].title, 99);` },
+  { id:'disaster_hero', name:'재앙의 용사', url:null, engine:'Unity', unity:true,
+    ms:[[1,'타이틀 → 게임 시작','첫 플레이 씬 로드'],[2,'스테이지 1 클리어',''],[3,'스테이지 2 클리어',''],[4,'보스전 진입',''],[5,'엔딩','']],
+    code:`// 진행 지점마다 (C#)
+GameTracker.Milestone("스테이지 1 클리어", 2);
+
+// 또는 SceneMilestoneTracker 컴포넌트를 첫 씬에 붙이면
+// 씬이 열릴 때마다 자동으로 기록됩니다.` },
+  { id:'highrise_cleaner', name:'고층 세척 마스터', url:null, engine:'미정',
+    ms:[[1,'게임 시작',''],[2,'1층 구역 완료',''],[3,'10층 도달',''],[4,'20층 도달',''],[5,'옥상 도달','']],
+    code:`// 게임 시작 버튼을 누를 때
+GameTracker.milestone('게임 시작', 1);
+
+// 층/구역을 끝낼 때마다 (step 은 진행할수록 커지게)
+GameTracker.milestone(floor + '층 도달', 1 + floor);` },
+  { id:'jurassic_brawl', name:'쥬라기 막싸움 + 공룡 교배소', url:'https://taehyun1221s.github.io/dinosaur-gene/jurassic-brawl/', engine:'HTML + JS 모듈',
+    file:'js/ui.js',
+    ms:[[1,'첫 교배','doBreed()'],[2,'훈련 미니게임','openMini(d, kind)'],[3,'첫 경기 종료','onMatchEnd(res)'],[4,'리그 우승','onMatchEnd — 결승 승리 시'],[5,'도감 열람','openDex(e)']],
+    code:`// js/ui.js
+function doBreed() {
+  GameTracker.milestone('첫 교배', 1);
+  ...
+function openMini(d, kind) {
+  GameTracker.milestone('훈련 미니게임', 2);
+  ...
+function onMatchEnd(res) {
+  GameTracker.milestone('첫 경기 종료', 3);
+  // 결승 승리를 판정하는 곳에서
+  // GameTracker.milestone('리그 우승', 4);
+  ...
+function openDex(e) {
+  GameTracker.milestone('도감 열람', 5);` },
+  { id:'my_pet_hero', name:'우리 집 개는 영웅', url:'https://sunny8197783.github.io/MyPetHero/', engine:'TypeScript + three.js',
+    file:'src/core/director.ts',
+    ms:[[1,'1일차 낮','setGame({ screen: \'day\' }) 근처'],[2,'1일차 밤','setGame({ screen: \'night\' }) 근처'],[3,'2일차 낮',''],[4,'2일차 밤',''],[5,'3일차 낮',''],[6,'3일차 밤',''],[7,'4일차 낮',''],[8,'4일차 밤',''],[9,'5일차 낮',''],[10,'5일차 밤',''],[11,'6일차 낮',''],[12,'6일차 밤',''],[13,'7일차 낮',''],[14,'7일차 밤',''],[15,'엔딩','setGame({ screen: \'ending\' }) 근처']],
+    code:`// src/core/director.ts  (빌드 후 gh-pages 에 다시 올려야 반영)
+declare global { interface Window { GameTracker?: { milestone(n: string, s: number): void } } }
+const track = (n: string, s: number) => window.GameTracker?.milestone(n, s);
+
+// 277행 근처: setGame({ screen: 'day', ... }) 바로 위
+track(\`\${campaign.day}일차 낮\`, campaign.day * 2 - 1);
+// 392행 근처: setGame({ screen: 'night', ... }) 바로 위
+track(\`\${campaign.night}일차 밤\`, campaign.night * 2);
+// 536행 근처: setGame({ screen: 'ending', ... }) 바로 위
+track('엔딩: ' + id, 15);` },
+  { id:'planet_battle', name:'행성 공방', url:'https://sunny8197783.github.io/PlanetBattle/', engine:'빌드된 JS (소스 별도)',
+    file:'원본 소스',
+    ms:[[1,'게임 시작',''],[2,'웨이브 5',''],[3,'웨이브 10',''],[4,'보스 처치',''],[5,'게임 클리어','']],
+    code:`// 저장소에는 빌드 결과(assets/main.js)만 있어서 원본 소스에서 넣어야 합니다.
+// 게임 시작
+window.GameTracker?.milestone('게임 시작', 1);
+// 웨이브가 바뀔 때 (5단위로 끊으면 퍼널이 읽기 쉬움)
+if (wave % 5 === 0) window.GameTracker?.milestone('웨이브 ' + wave, 1 + wave / 5);` },
+];
+const GAME_BY_ID = Object.fromEntries(GAMES.map(g => [g.id, g]));
+const slug = id => id.replace(/_/g, '-');
+const unslug = s => s.replace(/-/g, '_');
+
+/* =====================================================================
+   상태
+   ===================================================================== */
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+const state = {
+  days: LS.get('ga_days', 14),
+  cfg: LS.get('ga_cfg', { url:'', key:'' }),
+  auth: LS.get('ga_auth', null),
+  mode: 'demo',          // 'demo' | 'live'
+  liveError: null,
+  overviewCache: null,
+};
+if (state.cfg.url && state.cfg.key && state.auth) state.mode = 'live';
+
+/* =====================================================================
+   기간 (한국 시간 자정 기준)
+   ===================================================================== */
+const DAY = 86400000, KST = 9 * 3600000;
+function kstMidnight(t) { return Math.floor((t + KST) / DAY) * DAY - KST; }
+function range(days, shift = 0) {
+  const end = kstMidnight(Date.now()) + DAY - shift * days * DAY;
+  return { from: end - days * DAY, to: end };
+}
+function dayKey(t) { return new Date(t + KST).toISOString().slice(0, 10); }
+
+/* =====================================================================
+   LIVE API (Supabase REST, 라이브러리 없이 fetch)
+   ===================================================================== */
+const Live = {
+  async login(url, key, email, password) {
+    const r = await fetch(url + '/auth/v1/token?grant_type=password', {
+      method:'POST', headers:{ apikey:key, 'Content-Type':'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error_description || j.msg || j.message || ('로그인 실패 (' + r.status + ')'));
+    return { access_token:j.access_token, refresh_token:j.refresh_token, expires_at:Date.now() + (j.expires_in || 3600) * 1000, email };
+  },
+  async refresh() {
+    const { url, key } = state.cfg;
+    const r = await fetch(url + '/auth/v1/token?grant_type=refresh_token', {
+      method:'POST', headers:{ apikey:key, 'Content-Type':'application/json' },
+      body: JSON.stringify({ refresh_token: state.auth.refresh_token })
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { state.auth = null; LS.del('ga_auth'); throw new Error('로그인이 만료되었습니다. 다시 로그인하세요.'); }
+    state.auth = { ...state.auth, access_token:j.access_token, refresh_token:j.refresh_token, expires_at:Date.now() + (j.expires_in || 3600) * 1000 };
+    LS.set('ga_auth', state.auth);
+  },
+  async req(path, opts = {}) {
+    if (!state.auth) throw new Error('로그인이 필요합니다.');
+    if (Date.now() > state.auth.expires_at - 60000) await Live.refresh();
+    const { url, key } = state.cfg;
+    const r = await fetch(url + path, { ...opts, headers:{ apikey:key, Authorization:'Bearer ' + state.auth.access_token, 'Content-Type':'application/json', ...(opts.headers || {}) } });
+    if (!r.ok) {
+      const t = await r.text();
+      let m = t; try { m = JSON.parse(t).message || t; } catch (e) {}
+      throw new Error(r.status + ' ' + m);
+    }
+    return r.json();
+  },
+  rpc(fn, args) { return Live.req('/rest/v1/rpc/' + fn, { method:'POST', body: JSON.stringify(args) }); },
+  iso: t => new Date(t).toISOString(),
+  overview: (r) => Live.rpc('analytics_overview', { p_from:Live.iso(r.from), p_to:Live.iso(r.to) }),
+  daily: (g, r) => Live.rpc('analytics_daily', { p_game:g, p_from:Live.iso(r.from), p_to:Live.iso(r.to) }),
+  funnel: (g, r) => Live.rpc('analytics_funnel', { p_game:g, p_from:Live.iso(r.from), p_to:Live.iso(r.to) }),
+  dwell: (g, r) => Live.rpc('analytics_dwell_hist', { p_game:g, p_from:Live.iso(r.from), p_to:Live.iso(r.to) }),
+  freq: (g, r) => Live.rpc('analytics_visit_freq', { p_game:g, p_from:Live.iso(r.from), p_to:Live.iso(r.to) }),
+  sessions: (g, r) => Live.rpc('analytics_sessions', { p_game:g, p_from:Live.iso(r.from), p_to:Live.iso(r.to), p_limit:100 }),
+  isAdmin: () => Live.req('/rest/v1/admins?select=user_id').then(a => a.length > 0),
+};
+
+/* =====================================================================
+   DEMO 데이터 : 실제 DB 와 같은 규칙으로 계산 (schema.sql 의 함수와 동일)
+   ===================================================================== */
+const Demo = (() => {
+  function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  const R = mulberry(20261119);
+  const gauss = () => { let u = 0, v = 0; while (!u) u = R(); while (!v) v = R(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  const PROFILE = {
+    waiting:              { n:540, dwell:6.5, cont:.80, wall:1, per:2 },
+    flip_it_all:          { n:430, dwell:5.0, cont:.86, wall:7, per:5 },
+    seller_of_the_border: { n:310, dwell:9.0, cont:.84, wall:3, per:3 },
+    disaster_hero:        { n:120, dwell:11,  cont:.78, wall:3, per:2 },
+    highrise_cleaner:     { n:90,  dwell:4.0, cont:.70, wall:1, per:2 },
+    jurassic_brawl:       { n:380, dwell:8.0, cont:.82, wall:2, per:3 },
+    my_pet_hero:          { n:460, dwell:12,  cont:.88, wall:4, per:3 },
+    planet_battle:        { n:270, dwell:7.0, cont:.76, wall:2, per:2 },
+  };
+  const now = Date.now();
+  const sessions = [], reaches = [];
+  let sid = 0;
+  for (const g of GAMES) {
+    const P = PROFILE[g.id], ms = g.ms.map(m => ({ step:m[0], name:m[1] }));
+    for (let v = 0; v < P.n; v++) {
+      const vid = g.id + ':' + v;
+      let t = now - Math.pow(R(), 1.5) * 90 * DAY;
+      const evening = (19 + Math.floor(R() * 5)) % 24;
+      t = kstMidnight(t) + (R() < .6 ? evening : Math.floor(R() * 24)) * 3600000 + R() * 3600000;
+      let nS = 1; while (R() < .5 && nS < 14) nS++;
+      let idx = 0, total = 0;
+      const device = R() < .58 ? 'mobile' : (R() < .9 ? 'desktop' : 'tablet');
+      for (let s = 0; s < nS && t < now; s++) {
+        const bounce = s === 0 && R() < .18;
+        const dwell = bounce ? 4000 + R() * 40000 : Math.max(20000, Math.exp(Math.log(P.dwell * 60000) + gauss() * .75));
+        let k = 0;
+        if (!bounce) while (idx + k < ms.length && k < P.per) {
+          let p = P.cont; if (idx + k === P.wall) p *= .55;
+          if (R() > p) break; k++;
+        }
+        const id = 's' + (++sid);
+        let last = null, maxStep = null;
+        for (let j = 0; j < k; j++) {
+          const m = ms[idx + j];
+          reaches.push({ game:g.id, vid, sid:id, step:m.step, name:m.name, total: total + dwell * (j + 1) / (k + 1), t });
+          last = m.name; maxStep = m.step;
+        }
+        sessions.push({ game:g.id, vid, sid:id, t, dwell, last, maxStep, device });
+        idx += k; total += dwell;
+        if (idx >= ms.length && R() < .7) break;
+        t += (R() < .5 ? R() * DAY : R() * 9 * DAY) + 600000;
+      }
+    }
+  }
+  const median = a => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y), m = s.length / 2; return s.length % 2 ? s[m | 0] : (s[m - 1] + s[m]) / 2; };
+  const inR = (s, r) => s.t >= r.from && s.t < r.to;
+  const round1 = x => Math.round(x * 10) / 10;
+  const firstSeen = {};
+  for (const s of sessions) { const k = s.game + '|' + s.vid; if (!(k in firstSeen) || s.t < firstSeen[k]) firstSeen[k] = s.t; }
+
+  function overview(r) {
+    const out = [];
+    for (const g of GAMES) {
+      const ss = sessions.filter(s => s.game === g.id && inR(s, r));
+      if (!ss.length) continue;
+      const per = {}; ss.forEach(s => per[s.vid] = (per[s.vid] || 0) + 1);
+      const vids = Object.keys(per);
+      const best = {}; ss.forEach(s => { const b = best[s.vid]; if (!b || (s.maxStep ?? -1) > (b.maxStep ?? -1) || ((s.maxStep ?? -1) === (b.maxStep ?? -1) && s.t > b.t)) best[s.vid] = s; });
+      const dc = {}; Object.values(best).forEach(b => { const k = b.last || '(마일스톤 전 이탈)'; dc[k] = (dc[k] || 0) + 1; });
+      const top = Object.entries(dc).sort((a, b) => b[1] - a[1])[0];
+      out.push({
+        game_id:g.id, visitors:vids.length, sessions:ss.length,
+        returning_visitors: vids.filter(v => per[v] >= 2).length,
+        new_visitors: vids.filter(v => { const f = firstSeen[g.id + '|' + v]; return f >= r.from && f < r.to; }).length,
+        avg_dwell_sec: round1(ss.reduce((a, s) => a + s.dwell, 0) / ss.length / 1000),
+        median_dwell_sec: round1(median(ss.map(s => s.dwell)) / 1000),
+        total_play_hours: Math.round(ss.reduce((a, s) => a + s.dwell, 0) / 36000) / 100,
+        top_drop_milestone: top ? top[0] : null,
+      });
+    }
+    return out.sort((a, b) => b.visitors - a.visitors);
+  }
+  function daily(g, r) {
+    const m = {};
+    sessions.filter(s => (!g || s.game === g) && inR(s, r)).forEach(s => {
+      const k = dayKey(s.t); (m[k] = m[k] || { v:new Set(), n:0, d:0 }); m[k].v.add(s.vid); m[k].n++; m[k].d += s.dwell;
+    });
+    return Object.keys(m).sort().map(k => ({ day:k, visitors:m[k].v.size, sessions:m[k].n, avg_dwell_sec:round1(m[k].d / m[k].n / 1000) }));
+  }
+  function funnel(g, r) {
+    const ss = sessions.filter(s => s.game === g && inR(s, r));
+    const sids = new Set(ss.map(s => s.sid)), vids = new Set(ss.map(s => s.vid));
+    const rs = reaches.filter(x => x.game === g && sids.has(x.sid));
+    const maxS = {}; rs.forEach(x => { maxS[x.vid] = Math.max(maxS[x.vid] ?? -1, x.step); });
+    const steps = [...new Set(rs.map(x => x.step))].sort((a, b) => a - b);
+    const rows = [{ step:0, milestone:'접속', visitors_reached:vids.size, visitors_dropped:[...vids].filter(v => !(v in maxS)).length, median_total_min:null }];
+    for (const st of steps) {
+      const at = rs.filter(x => x.step === st);
+      const firstPer = {}; at.forEach(x => { if (!(x.vid in firstPer) || x.total < firstPer[x.vid]) firstPer[x.vid] = x.total; });
+      rows.push({ step:st, milestone:at[0].name, visitors_reached:Object.keys(firstPer).length,
+        visitors_dropped:Object.values(maxS).filter(m => m === st).length,
+        median_total_min: round1(median(Object.values(firstPer)) / 60000) });
+    }
+    return rows;
+  }
+  const DW = [['30초 미만',0,30],['30초–1분',30,60],['1–3분',60,180],['3–5분',180,300],['5–10분',300,600],['10–20분',600,1200],['20–40분',1200,2400],['40분 이상',2400,1e12]];
+  function dwell(g, r) {
+    const ss = sessions.filter(s => (!g || s.game === g) && inR(s, r));
+    return DW.map((b, i) => ({ bucket_order:i + 1, bucket:b[0], sessions:ss.filter(s => s.dwell / 1000 >= b[1] && s.dwell / 1000 < b[2]).length }));
+  }
+  const FQ = [['1회',1,2],['2회',2,3],['3–5회',3,6],['6–10회',6,11],['11회 이상',11,1e9]];
+  function freq(g, r) {
+    const per = {}; sessions.filter(s => (!g || s.game === g) && inR(s, r)).forEach(s => per[s.vid] = (per[s.vid] || 0) + 1);
+    const c = Object.values(per);
+    return FQ.map((b, i) => ({ bucket_order:i + 1, bucket:b[0], visitors:c.filter(n => n >= b[1] && n < b[2]).length }));
+  }
+  function list(g, r) {
+    const all = sessions.filter(s => s.game === g && s.t < r.to).sort((a, b) => a.t - b.t);
+    const no = {}; const rows = all.map(s => ({ ...s, visit_no: (no[s.vid] = (no[s.vid] || 0) + 1) }));
+    return rows.reverse().slice(0, 100).map(s => ({
+      session_id:s.sid, visitor_id: hash(s.vid), started_at:new Date(s.t).toISOString(),
+      dwell_sec:Math.round(s.dwell / 1000), last_milestone:s.last, max_step:s.maxStep, device:s.device, visit_no:s.visit_no }));
+  }
+  function hash(s) { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return (h >>> 0).toString(16).padStart(8, '0') + '-demo'; }
+  const later = f => (...a) => new Promise(res => setTimeout(() => res(f(...a)), 60));
+  return { overview:later(overview), daily:later(daily), funnel:later(funnel), dwell:later(dwell), freq:later(freq), sessions:later(list) };
+})();
+
+const api = () => state.mode === 'live' ? Live : Demo;
+
+/* =====================================================================
+   포맷
+   ===================================================================== */
+const fmtN = n => n == null ? '–' : Number(n).toLocaleString('ko-KR');
+function fmtDur(sec, short) {
+  if (sec == null || isNaN(sec)) return '–';
+  sec = Math.round(sec);
+  if (sec < 60) return sec + '초';
+  const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+  if (h) return h + '시간 ' + m + '분';
+  return short ? m + '분' : m + '분 ' + (s ? s + '초' : '');
+}
+const pct = (a, b) => b ? Math.round(a / b * 1000) / 10 : 0;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+function fmtTime(iso) {
+  const d = new Date(new Date(iso).getTime() + KST);
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+}
+function delta(cur, prev, invert) {
+  if (prev == null || !prev) return '<span>이전 기간 데이터 없음</span>';
+  const d = (cur - prev) / prev * 100, up = d >= 0;
+  return `<span class="${(up !== !!invert) ? 'up' : 'down'}">${up ? '▲' : '▼'} ${Math.abs(d).toFixed(1)}%</span> 이전 ${state.days}일 대비`;
+}
+
+/* =====================================================================
+   차트 (SVG, 의존성 없음)
+   ===================================================================== */
+const tip = document.getElementById('tip');
+function showTip(e, title, rows) {
+  tip.innerHTML = `<div class="t">${esc(title)}</div>` + rows.map(r => `<div class="r"><span>${r.c ? `<i style="background:${r.c}"></i>` : ''}${esc(r.l)}</span><b>${esc(r.v)}</b></div>`).join('');
+  tip.classList.add('show');
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + w > innerWidth - 8) x = e.clientX - w - 14;
+  if (y + h > innerHeight - 8) y = e.clientY - h - 14;
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+}
+const hideTip = () => tip.classList.remove('show');
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+function niceMax(v) { if (v <= 0) return 4; const p = Math.pow(10, Math.floor(Math.log10(v))); for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= v) return m * p; return 10 * p; }
+
+function lineChart(el, labels, series, opt = {}) {
+  const W = el.clientWidth || 600, H = opt.h || 220, L = 40, Rr = 12, T = 10, B = 26;
+  const max = niceMax(Math.max(1, ...series.flatMap(s => s.values)));
+  const x = i => L + (labels.length <= 1 ? (W - L - Rr) / 2 : i * (W - L - Rr) / (labels.length - 1));
+  const y = v => T + (H - T - B) * (1 - v / max);
+  const ticks = (max % 5 === 0 ? [0, .2, .4, .6, .8, 1] : [0, .25, .5, .75, 1]).map(f => f * max);
+  const every = Math.ceil(labels.length / Math.max(2, Math.floor((W - L) / 64)));
+  let s = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(opt.label || '')}">`;
+  s += `<g class="grid">${ticks.map(t => `<line x1="${L}" x2="${W - Rr}" y1="${y(t)}" y2="${y(t)}"/>`).join('')}</g>`;
+  s += `<g class="axis">${ticks.map(t => `<text x="${L - 8}" y="${y(t) + 4}" text-anchor="end">${fmtN(Math.round(t))}</text>`).join('')}`;
+  s += labels.map((l, i) => (i % every === 0 || i === labels.length - 1) && !(i !== labels.length - 1 && labels.length - 1 - i < every * .6) ? `<text x="${x(i)}" y="${H - 6}" text-anchor="middle">${l.slice(5).replace('-', '/')}</text>` : '').join('') + `</g>`;
+  for (const se of series) {
+    const d = se.values.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+    s += `<path d="${d}" fill="none" stroke="${se.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  s += `<line class="xh" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="${css('--line-strong')}" stroke-width="1" style="display:none"/>`;
+  s += `<g class="dots"></g><rect x="${L}" y="${T}" width="${W - L - Rr}" height="${H - T - B}" fill="transparent"/></svg>`;
+  el.innerHTML = s;
+  const svg = el.querySelector('svg'), xh = svg.querySelector('.xh'), dots = svg.querySelector('.dots');
+  svg.addEventListener('pointermove', e => {
+    const bb = svg.getBoundingClientRect(), px = (e.clientX - bb.left) * W / bb.width;
+    const i = Math.max(0, Math.min(labels.length - 1, Math.round((px - L) / ((W - L - Rr) / Math.max(1, labels.length - 1)))));
+    xh.setAttribute('x1', x(i)); xh.setAttribute('x2', x(i)); xh.style.display = '';
+    dots.innerHTML = series.map(se => `<circle cx="${x(i)}" cy="${y(se.values[i])}" r="4.5" fill="${se.color}" stroke="${css('--surface')}" stroke-width="2"/>`).join('');
+    showTip(e, labels[i], series.map(se => ({ c:se.color, l:se.name, v:(se.fmt || fmtN)(se.values[i]) })));
+  });
+  svg.addEventListener('pointerleave', () => { xh.style.display = 'none'; dots.innerHTML = ''; hideTip(); });
+}
+
+function columnChart(el, labels, values, opt = {}) {
+  const W = el.clientWidth || 500, H = opt.h || 200, L = 40, Rr = 6, T = 10, B = 30;
+  const max = niceMax(Math.max(1, ...values));
+  const n = labels.length, slot = (W - L - Rr) / n, bw = Math.min(46, slot - 2 - slot * .22);
+  const y = v => T + (H - T - B) * (1 - v / max);
+  const total = values.reduce((a, b) => a + b, 0);
+  const ticks = [0, .5, 1].map(f => f * max);
+  let s = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(opt.label || '')}">`;
+  s += `<g class="grid">${ticks.map(t => `<line x1="${L}" x2="${W - Rr}" y1="${y(t)}" y2="${y(t)}"/>`).join('')}</g>`;
+  s += `<g class="axis">${ticks.map(t => `<text x="${L - 8}" y="${y(t) + 4}" text-anchor="end">${fmtN(Math.round(t))}</text>`).join('')}`;
+  const short = opt.short || labels, skip = slot < 44 ? 2 : 1;
+  s += short.map((l, i) => i % skip ? '' : `<text x="${L + slot * i + slot / 2}" y="${H - 9}" text-anchor="middle" style="font-family:var(--sans)">${esc(l)}</text>`).join('') + '</g>';
+  values.forEach((v, i) => {
+    const x0 = L + slot * i + (slot - bw) / 2, y0 = y(v), h = H - B - y0, r = Math.min(4, h);
+    if (v > 0) s += `<path d="M${x0},${H - B}V${y0 + r}Q${x0},${y0} ${x0 + r},${y0}H${x0 + bw - r}Q${x0 + bw},${y0} ${x0 + bw},${y0 + r}V${H - B}Z" fill="${opt.color || css('--series-1')}"/>`;
+    s += `<rect class="hit" data-i="${i}" x="${L + slot * i}" y="${T}" width="${slot}" height="${H - T - B}" fill="transparent"/>`;
+  });
+  el.innerHTML = s + '</svg>';
+  el.querySelectorAll('.hit').forEach(h => {
+    h.addEventListener('pointermove', e => { const i = +h.dataset.i; showTip(e, labels[i], [{ c:opt.color || css('--series-1'), l:opt.unit || '값', v:fmtN(values[i]) }, { l:'비율', v:pct(values[i], total) + '%' }]); });
+    h.addEventListener('pointerleave', hideTip);
+  });
+}
+
+function tableHTML(cols, rows) {
+  return `<div class="tbl-wrap"><table><thead><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map((v, i) => `<td class="${i ? 'num' : 'l'}">${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+function card(id, title, sub, body = '', withTable = true) {
+  return `<section class="card" id="${id}"><div class="card-h"><div style="flex:1"><h2>${title}</h2>${sub ? `<p>${sub}</p>` : ''}</div>${withTable ? `<button class="tbl-toggle" data-for="${id}">표로 보기</button>` : ''}</div><div class="c-chart">${body}</div><div class="c-table" hidden></div></section>`;
+}
+function wireToggles(root) {
+  root.querySelectorAll('.tbl-toggle').forEach(b => b.onclick = () => {
+    const c = document.getElementById(b.dataset.for), t = c.querySelector('.c-table'), ch = c.querySelector('.c-chart');
+    const showT = t.hidden; t.hidden = !showT; ch.hidden = showT; b.textContent = showT ? '차트로 보기' : '표로 보기';
+  });
+}
+
+/* =====================================================================
+   화면
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const view = $('#view');
+
+function renderNav() {
+  const ov = state.overviewCache || [];
+  const cnt = id => { const o = ov.find(x => x.game_id === id); return o ? fmtN(o.visitors) : ''; };
+  const cur = location.hash.slice(1) || 'overview';
+  $('#nav').innerHTML =
+    `<a href="#overview" class="${cur === 'overview' ? 'on' : ''}">전체 개요</a>` +
+    `<div class="nav-label">게임</div>` +
+    GAMES.map(g => `<a href="#game-${slug(g.id)}" class="${cur === 'game-' + slug(g.id) ? 'on' : ''}"><span>${esc(g.name)}</span>${cnt(g.id) ? `<span class="cnt">${cnt(g.id)}</span>` : (g.url ? '' : '<span class="tag">링크 없음</span>')}</a>`).join('') +
+    `<div class="nav-label">설정</div><a href="#guide" class="${cur === 'guide' ? 'on' : ''}">설치 가이드</a>`;
+}
+
+function renderConn() {
+  const p = $('#connPill');
+  p.className = 'pill' + (state.mode === 'live' ? (state.liveError ? ' err' : ' live') : '');
+  p.querySelector('span').textContent = state.mode === 'live' ? (state.liveError ? 'DB 오류' : 'DB 연결됨') : '데모 데이터';
+  const b = $('#banner');
+  if (state.mode === 'demo') b.innerHTML = `<div class="banner"><span>ℹ</span><div><b>지금은 데모 데이터입니다.</b> 화면 구성은 실제와 같고 숫자만 가짜입니다. <a href="#guide">설치 가이드</a>대로 DB를 만들고 게임에 트래커를 넣은 뒤, 오른쪽 위 <b>데모 데이터</b> 버튼을 눌러 연결하세요.</div></div>`;
+  else if (state.liveError) b.innerHTML = `<div class="banner err"><span>!</span><div><b>DB에서 불러오지 못했습니다.</b> ${esc(state.liveError)}</div></div>`;
+  else b.innerHTML = '';
+}
+
+function setTitle(t, sub) { $('#title').innerHTML = esc(t) + `<small>${sub || ''}</small>`; document.title = t + ' · 게임 분석실'; }
+function rangeLabel(r) { const f = new Date(r.from + KST), t = new Date(r.to - 1 + KST); return `${f.getUTCMonth() + 1}월 ${f.getUTCDate()}일 – ${t.getUTCMonth() + 1}월 ${t.getUTCDate()}일 (한국 시간)`; }
+
+async function load(fn) {
+  try { const r = await fn(); state.liveError = null; return r; }
+  catch (e) {
+    let m = e.message || String(e);
+    if (e instanceof TypeError) m = '서버에 닿지 못했습니다. 주소를 확인하세요. (claude.ai 미리보기 창 안에서는 외부 DB 연결이 막혀 있어, GitHub Pages 에 올린 대시보드에서 연결해야 합니다.)';
+    state.liveError = m; renderConn(); throw e;
+  }
+}
+
+async function viewOverview() {
+  const r = range(state.days), pr = range(state.days, 1);
+  setTitle('전체 개요', rangeLabel(r));
+  view.innerHTML = '<div class="empty">불러오는 중…</div>';
+  const [ov, prev, daily] = await Promise.all([load(() => api().overview(r)), load(() => api().overview(pr)), load(() => api().daily(null, r))]);
+  state.overviewCache = ov; renderNav();
+  const sum = (a, k) => a.reduce((x, o) => x + Number(o[k] || 0), 0);
+  const V = sum(ov, 'visitors'), S = sum(ov, 'sessions'), H = sum(ov, 'total_play_hours'), RV = sum(ov, 'returning_visitors');
+  const pV = sum(prev, 'visitors'), pS = sum(prev, 'sessions'), pH = sum(prev, 'total_play_hours');
+  const avg = S ? H * 3600 / S : 0, pAvg = pS ? pH * 3600 / pS : 0;
+
+  view.innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><div class="l">방문자 (게임별 고유 합계)</div><div class="v">${fmtN(V)}</div><div class="d">${delta(V, pV)}</div></div>
+      <div class="kpi"><div class="l">접속 횟수 (세션)</div><div class="v">${fmtN(S)}</div><div class="d">${delta(S, pS)}</div></div>
+      <div class="kpi"><div class="l">재방문율</div><div class="v">${pct(RV, V)}<small>%</small></div><div class="d">기간 안에 2번 이상 들어온 사람</div></div>
+      <div class="kpi"><div class="l">평균 체류시간</div><div class="v">${fmtDur(avg)}</div><div class="d">${delta(avg, pAvg)}</div></div>
+      <div class="kpi"><div class="l">총 플레이 시간</div><div class="v">${fmtN(Math.round(H))}<small>시간</small></div><div class="d">${delta(H, pH)}</div></div>
+    </div>
+    <section class="card"><div class="card-h"><div style="flex:1"><h2>게임별 비교</h2><p>행을 누르면 그 게임의 상세 분석으로 갑니다. 열 제목을 누르면 정렬됩니다.</p></div></div><div id="ovTable"></div></section>
+    ${card('cTrend', '전체 일별 방문자', '모든 게임 합계 · 한 사람이 여러 게임을 하면 게임마다 따로 셉니다')}
+  `;
+  // table
+  const rows = GAMES.map(g => {
+    const o = ov.find(x => x.game_id === g.id) || { game_id:g.id, visitors:0, sessions:0, returning_visitors:0, new_visitors:0, avg_dwell_sec:null, median_dwell_sec:null, total_play_hours:0, top_drop_milestone:null };
+    return { g, o, rr: pct(o.returning_visitors, o.visitors), spv: o.visitors ? Math.round(o.sessions / o.visitors * 10) / 10 : 0 };
+  });
+  let sortKey = 'visitors', dir = -1;
+  const COLS = [['게임', null], ['방문자', 'visitors'], ['신규', 'new_visitors'], ['접속', 'sessions'], ['1인당 접속', 'spv'], ['재방문율', 'rr'], ['평균 체류', 'avg_dwell_sec'], ['중앙 체류', 'median_dwell_sec'], ['총 플레이', 'total_play_hours'], ['가장 많이 멈춘 곳', null]];
+  const val = (x, k) => k in x ? x[k] : Number(x.o[k] ?? -1);
+  function draw() {
+    rows.sort((a, b) => (val(a, sortKey) - val(b, sortKey)) * dir);
+    $('#ovTable').innerHTML = `<div class="tbl-wrap"><table><thead><tr>${COLS.map(c => `<th class="${c[1] ? 'sortable' : ''}" data-k="${c[1] || ''}">${c[0]}${c[1] === sortKey ? (dir < 0 ? ' ↓' : ' ↑') : ''}</th>`).join('')}</tr></thead><tbody>${
+      rows.map(({ g, o, rr, spv }) => `<tr class="click" data-g="${slug(g.id)}">
+        <td class="l"><div class="gname">${esc(g.name)}<small>${esc(g.engine)}${g.url ? '' : ' · 링크 없음'}</small></div></td>
+        <td class="num">${fmtN(o.visitors)}</td><td class="num">${fmtN(o.new_visitors)}</td><td class="num">${fmtN(o.sessions)}</td>
+        <td class="num">${spv || '–'}</td><td class="num">${o.visitors ? rr + '%' : '–'}</td>
+        <td class="num">${fmtDur(o.avg_dwell_sec)}</td><td class="num">${fmtDur(o.median_dwell_sec)}</td>
+        <td class="num">${o.total_play_hours ? fmtN(Math.round(o.total_play_hours * 10) / 10) + '시간' : '–'}</td>
+        <td class="l"><span class="drop-tag" title="${esc(o.top_drop_milestone)}">${esc(o.top_drop_milestone || '–')}</span></td></tr>`).join('')}</tbody></table></div>`;
+    $('#ovTable').querySelectorAll('th.sortable').forEach(th => th.onclick = () => { const k = th.dataset.k; dir = k === sortKey ? -dir : -1; sortKey = k; draw(); });
+    $('#ovTable').querySelectorAll('tr.click').forEach(tr => tr.onclick = () => location.hash = 'game-' + tr.dataset.g);
+  }
+  draw();
+  // trend
+  const labels = [], m = Object.fromEntries(daily.map(d => [String(d.day).slice(0, 10), d]));
+  for (let t = r.from; t < r.to; t += DAY) labels.push(dayKey(t));
+  const vis = labels.map(k => m[k] ? Number(m[k].visitors) : 0), ses = labels.map(k => m[k] ? Number(m[k].sessions) : 0);
+  const c = $('#cTrend .c-chart');
+  c.innerHTML = `<div class="legend"><span><i style="background:var(--series-1)"></i>방문자</span><span><i style="background:var(--series-2)"></i>접속</span></div><div class="chart"></div>`;
+  lineChart(c.querySelector('.chart'), labels, [{ name:'방문자', color:css('--series-1'), values:vis }, { name:'접속', color:css('--series-2'), values:ses }], { label:'일별 방문자와 접속' });
+  $('#cTrend .c-table').innerHTML = tableHTML(['날짜', '방문자', '접속'], labels.map((l, i) => [l, fmtN(vis[i]), fmtN(ses[i])]));
+  wireToggles(view);
+}
+
+async function viewGame(id) {
+  const g = GAME_BY_ID[id];
+  if (!g) { location.hash = 'overview'; return; }
+  const r = range(state.days);
+  setTitle(g.name, rangeLabel(r) + (g.url ? ` · <a href="${esc(g.url)}" target="_blank" rel="noopener">게임 열기 ↗</a>` : ' · 아직 공개 링크 없음'));
+  view.innerHTML = '<div class="empty">불러오는 중…</div>';
+  const [ovAll, daily, fun, dw, fq, list] = await Promise.all([
+    load(() => api().overview(r)),
+    load(() => api().daily(id, r)), load(() => api().funnel(id, r)), load(() => api().dwell(id, r)),
+    load(() => api().freq(id, r)), load(() => api().sessions(id, r))]);
+  state.overviewCache = ovAll; renderNav();
+  const o = ovAll.find(x => x.game_id === id);
+  if (!o) {
+    view.innerHTML = `<div class="card"><div class="empty">이 기간에 기록된 접속이 없습니다.<br><br>${g.url ? '트래커를 아직 넣지 않았다면 <a href="#guide">설치 가이드</a>를 보세요.' : '게임을 웹에 올리고 트래커를 넣으면 여기에 나옵니다. <a href="#guide">설치 가이드</a>'}</div></div>`;
+    return;
+  }
+  const last = fun.length > 1 ? fun[fun.length - 1] : null;
+  const V = Number(o.visitors);
+  const finalStep = Math.max(...g.ms.map(m => m[0]));
+  const finished = !!last && Number(last.step) >= finalStep;
+
+  view.innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><div class="l">방문자 (고유)</div><div class="v">${fmtN(V)}</div><div class="d">신규 ${fmtN(o.new_visitors)}명 · 접속 ${fmtN(o.sessions)}회</div></div>
+      <div class="kpi"><div class="l">1인당 접속</div><div class="v">${(o.sessions / V).toFixed(1)}<small>회</small></div><div class="d">재방문 ${fmtN(o.returning_visitors)}명 (${pct(o.returning_visitors, V)}%)</div></div>
+      <div class="kpi"><div class="l">평균 체류</div><div class="v">${fmtDur(o.avg_dwell_sec)}</div><div class="d">중앙값 ${fmtDur(o.median_dwell_sec)}</div></div>
+      <div class="kpi"><div class="l">${!last ? '마일스톤' : finished ? '끝까지 간 사람' : '가장 멀리 간 지점'}</div><div class="v">${last ? pct(last.visitors_reached, V) + '<small>%</small>' : '–'}</div><div class="d">${last ? `${esc(last.milestone)} 도달 ${fmtN(last.visitors_reached)}명` : '아직 마일스톤 기록 없음'}</div></div>
+    </div>
+    ${card('cFunnel', '어디서 빠지나 · 마일스톤 퍼널', '도달 = 그 지점을 밟은 사람 수 · 여기서 멈춤 = 기간 중 마지막으로 도달한 지점이 여기인 사람 수', '', true)}
+    <div class="grid2">
+      ${card('cDwell', '체류시간 분포', '접속 1회당 실제로 화면을 보며 조작한 시간')}
+      ${card('cFreq', '같은 사람이 몇 번 들어왔나', '기간 안 사람별 접속 횟수')}
+    </div>
+    ${card('cDaily', '일별 추이', '')}
+    <section class="card"><div class="card-h"><div style="flex:1"><h2>최근 접속 기록</h2><p>최근 접속부터 · 방문자 ID는 브라우저마다 무작위로 만든 값이라 누구인지 알 수 없습니다</p></div></div><div id="sessTable"></div></section>
+  `;
+
+  // funnel
+  const fc = $('#cFunnel .c-chart');
+  if (fun.length <= 1) {
+    fc.innerHTML = `<div class="empty">아직 마일스톤이 기록되지 않았습니다. 게임 코드에 <code>GameTracker.milestone('이름', 순서)</code>를 넣으면 여기에 단계별로 나옵니다. <a href="#guide">어디에 넣을지 보기</a></div>`;
+  } else {
+    const top = Number(fun[0].visitors_reached) || 1;
+    const dropRows = finished ? fun.slice(0, -1) : fun;
+    const maxDrop = Math.max(...dropRows.map(f => Number(f.visitors_dropped)), 1);
+    // 표본이 너무 작은 구간(앞 단계 10명 미만 또는 전체 5% 미만)은 이탈률 비교에서 제외
+    const minN = Math.max(10, top * .05);
+    let worst = null;
+    for (let i = 1; i < fun.length; i++) {
+      const prevN = Number(fun[i - 1].visitors_reached), lost = prevN - Number(fun[i].visitors_reached), rate = prevN ? lost / prevN : 0;
+      if (prevN >= minN && (!worst || rate > worst.rate)) worst = { from:fun[i - 1].milestone, to:fun[i].milestone, rate, lost };
+    }
+    const biggest = dropRows.reduce((a, f) => Number(f.visitors_dropped) > Number(a.visitors_dropped) ? f : a, dropRows[0]);
+    fc.innerHTML = `<div class="f-head"><span>지점</span><span>도달</span><span>도달 인원</span><span>여기서 멈춤</span></div><div class="funnel">${
+      fun.map((f, i) => {
+        const isLast = finished && i === fun.length - 1, w = Number(f.visitors_reached) / top * 100, dr = Number(f.visitors_dropped);
+        return `<div class="f-row" data-i="${i}">
+          <div class="f-name" title="${esc(f.milestone)}"><small>${f.step}</small>${esc(f.milestone)}</div>
+          <div class="f-track"><div class="f-bar" style="width:${w}%"></div></div>
+          <div class="f-num">${fmtN(f.visitors_reached)}<small>${pct(f.visitors_reached, top)}%</small></div>
+          ${isLast ? `<div class="f-drop done">완주 ${fmtN(dr)}</div>` : `<div class="f-drop">${fmtN(dr)}<span class="mini" style="width:${Math.max(1, dr / maxDrop * 40)}px"></span></div>`}
+        </div>`; }).join('')}</div>
+      <div class="insight">가장 많이 멈춘 곳은 <b>${esc(biggest.milestone)}</b> (${fmtN(biggest.visitors_dropped)}명, 전체의 ${pct(biggest.visitors_dropped, top)}%)입니다.
+      ${worst && worst.rate > 0 ? ` 단계 사이 이탈률이 가장 큰 구간은 <b>${esc(worst.from)} → ${esc(worst.to)}</b>로, 앞 단계 도달자의 <b>${Math.round(worst.rate * 100)}%</b>가 다음 단계에 못 갔습니다.` : ''}</div>`;
+    fc.querySelectorAll('.f-row').forEach(row => {
+      const f = fun[+row.dataset.i], i = +row.dataset.i;
+      row.onpointermove = e => showTip(e, f.milestone, [
+        { c:css('--series-1'), l:'도달', v:fmtN(f.visitors_reached) + '명' },
+        { l:'접속 대비', v:pct(f.visitors_reached, top) + '%' },
+        ...(i ? [{ l:'앞 단계 대비', v:pct(f.visitors_reached, fun[i - 1].visitors_reached) + '%' }] : []),
+        { c: finished && i === fun.length - 1 ? null : css('--series-2'), l: finished && i === fun.length - 1 ? '완주' : '여기서 멈춤', v:fmtN(f.visitors_dropped) + '명' },
+        ...(f.median_total_min != null ? [{ l:'도달까지 누적 플레이(중앙)', v:f.median_total_min + '분' }] : [])]);
+      row.onpointerleave = hideTip;
+    });
+    $('#cFunnel .c-table').innerHTML = tableHTML(['단계', '지점', '도달', '접속 대비', '여기서 멈춤', '도달까지 누적 플레이(중앙, 분)'],
+      fun.map(f => [f.step, f.milestone, fmtN(f.visitors_reached), pct(f.visitors_reached, top) + '%', fmtN(f.visitors_dropped), f.median_total_min ?? '–'])).replace('<th>단계</th>', '<th style="text-align:left">단계</th>');
+  }
+
+  // dwell + freq
+  columnChart($('#cDwell .c-chart'), dw.map(d => d.bucket), dw.map(d => Number(d.sessions)), { unit:'접속', label:'체류시간 분포', h:210, short:['~30초', '~1분', '~3분', '~5분', '~10분', '~20분', '~40분', '40분+'] });
+  $('#cDwell .c-table').innerHTML = tableHTML(['체류시간', '접속'], dw.map(d => [d.bucket, fmtN(d.sessions)]));
+  columnChart($('#cFreq .c-chart'), fq.map(d => d.bucket), fq.map(d => Number(d.visitors)), { unit:'사람', label:'방문 횟수 분포', h:210, short:['1회', '2회', '3–5', '6–10', '11+'] });
+  $('#cFreq .c-table').innerHTML = tableHTML(['접속 횟수', '사람'], fq.map(d => [d.bucket, fmtN(d.visitors)]));
+
+  // daily
+  const labels = [], m = Object.fromEntries(daily.map(d => [String(d.day).slice(0, 10), d]));
+  for (let t = r.from; t < r.to; t += DAY) labels.push(dayKey(t));
+  const vis = labels.map(k => m[k] ? Number(m[k].visitors) : 0), ses = labels.map(k => m[k] ? Number(m[k].sessions) : 0), dwl = labels.map(k => m[k] ? Number(m[k].avg_dwell_sec) : 0);
+  const dc = $('#cDaily .c-chart');
+  dc.innerHTML = `<div class="legend"><span><i style="background:var(--series-1)"></i>방문자</span><span><i style="background:var(--series-2)"></i>접속</span></div><div class="chart"></div>`;
+  lineChart(dc.querySelector('.chart'), labels, [{ name:'방문자', color:css('--series-1'), values:vis }, { name:'접속', color:css('--series-2'), values:ses }], { label:'일별 방문자와 접속' });
+  $('#cDaily .c-table').innerHTML = tableHTML(['날짜', '방문자', '접속', '평균 체류'], labels.map((l, i) => [l, fmtN(vis[i]), fmtN(ses[i]), fmtDur(dwl[i])]));
+
+  // sessions
+  let shown = 20;
+  const drawSess = () => { $('#sessTable').innerHTML = list.length ? `<div class="tbl-wrap"><table><thead><tr><th>시작</th><th>방문자</th><th>몇 번째 방문</th><th>체류</th><th style="text-align:left">마지막 마일스톤</th><th>기기</th></tr></thead><tbody>${
+    list.slice(0, shown).map(s => `<tr><td class="l num">${fmtTime(s.started_at)}</td><td class="num">${esc(String(s.visitor_id).slice(0, 6))}</td><td class="num">${s.visit_no}번째</td><td class="num">${fmtDur(s.dwell_sec)}</td><td class="l">${esc(s.last_milestone || '–')}</td><td>${({ mobile:'모바일', desktop:'PC', tablet:'태블릿' })[s.device] || '–'}</td></tr>`).join('')
+  }</tbody></table></div>${shown < list.length ? `<div style="text-align:center;margin-top:12px"><button class="btn" id="moreSess">더 보기 (${list.length - shown}건)</button></div>` : ''}` : '<div class="empty">기록 없음</div>';
+    const mb = $('#moreSess'); if (mb) mb.onclick = () => { shown += 40; drawSess(); }; };
+  drawSess();
+  wireToggles(view);
+}
+
+function viewGuide() {
+  setTitle('설치 가이드', '한 번만 하면 이후엔 자동으로 쌓입니다');
+  const U = state.cfg.url || 'https://YOUR-PROJECT.supabase.co', K = state.cfg.key || 'sb_publishable_xxxxxxxx';
+  const TRACKER = 'https://sunny8197783.github.io/game-analytics/tracker/game-tracker.js';
+  const pre = t => `<pre><button class="copy">복사</button>${esc(t)}</pre>`;
+  view.innerHTML = `
+    <div class="steps">
+      <div class="step"><h3>Supabase 프로젝트 만들기 (무료)</h3>
+        <p><a href="https://supabase.com/dashboard" target="_blank" rel="noopener">supabase.com</a> → New project. 지역은 <b>Northeast Asia (Seoul)</b>.</p></div>
+      <div class="step"><h3>DB 만들기</h3>
+        <p>SQL Editor 에 <code>supabase/schema.sql</code> 전체를 붙여넣고 Run. 테이블·보안 규칙·분석 함수가 한 번에 만들어집니다.</p>
+        <ul><li>게임은 기록을 <b>쓰기만</b> 할 수 있고, 읽기는 아래에서 등록한 관리자 계정만 됩니다.</li></ul></div>
+      <div class="step"><h3>관리자 계정 등록</h3>
+        <p>Authentication → Users → Add user 로 내 이메일/비밀번호 계정을 만들고, SQL Editor 에서:</p>
+        ${pre(`insert into public.admins (user_id)\nselect id from auth.users where email = '내이메일@example.com'\non conflict do nothing;`)}
+        <p>Authentication → Sign In / Providers 에서 <b>Allow new users to sign up</b> 을 끄면 남이 계정을 못 만듭니다.</p></div>
+      <div class="step"><h3>이 대시보드를 GitHub Pages 에 올리기</h3>
+        <p>받은 <code>game-analytics</code> 폴더를 새 저장소 <code>Sunny8197783/game-analytics</code> 로 올리고 Settings → Pages 에서 main 브랜치를 켭니다.</p>
+        <ul><li>대시보드: <code>https://sunny8197783.github.io/game-analytics/</code></li><li>트래커: <code>${esc(TRACKER)}</code></li></ul>
+        <p>대시보드 오른쪽 위 버튼 → Project URL, Publishable key(Settings → API Keys), 관리자 이메일로 연결.</p></div>
+      <div class="step"><h3>각 게임에 트래커 넣기</h3>
+        <p>게임 <code>index.html</code> 의 <code>&lt;/body&gt;</code> 바로 위에 아래 한 줄. 이것만으로 <b>방문자·접속 횟수·체류시간</b>이 쌓입니다. ${state.cfg.url ? '(연결 정보가 이미 채워져 있습니다)' : '(DB 연결 후 이 페이지를 다시 열면 주소와 키가 채워집니다)'}</p>
+        <p>그다음 아래 게임별 코드로 <b>마일스톤</b>을 넣으면 이탈 지점이 보입니다. step 숫자는 <b>진행할수록 커지게</b>만 정하면 됩니다.</p></div>
+    </div>
+    <h2 style="font-size:16px;margin:26px 0 12px">게임별 설치 코드</h2>
+    ${GAMES.map(g => `<div class="gcard" id="g-${slug(g.id)}">
+      <h3>${esc(g.name)} <span class="pill" style="cursor:default">${esc(g.engine)}</span> <code>${g.id}</code></h3>
+      <div class="meta">${g.url ? `<a href="${esc(g.url)}" target="_blank" rel="noopener">${esc(g.url)}</a>` : '공개 링크 없음 — 웹에 올린 뒤 같은 방법으로 넣으세요'}${g.file ? ` · 수정할 파일: <code>${esc(g.file)}</code>` : ''}</div>
+      ${g.unity ? `<p style="font-size:13px;color:var(--text-2)">Unity WebGL 빌드: <code>tracker/unity/Assets</code> 폴더를 프로젝트 Assets 에 복사 → WebGL 로 빌드 → 빌드된 <code>index.html</code> 에 아래 script 한 줄 추가. (PC/모바일 앱 빌드는 웹 트래커가 동작하지 않습니다)</p>` : ''}
+      ${pre(`<script src="${TRACKER}"\n        data-game="${g.id}"\n        data-url="${U}"\n        data-key="${K}"><\/script>`)}
+      ${pre(g.code)}
+      <details><summary style="cursor:pointer;font-size:12.5px;color:var(--text-2)">추천 마일스톤 ${g.ms.length}개 보기</summary>
+      <table class="ms-table" style="margin-top:8px"><thead><tr><th>step</th><th>이름</th><th>넣는 곳</th></tr></thead><tbody>${g.ms.map(m => `<tr><td>${m[0]}</td><td>${esc(m[1])}</td><td style="color:var(--text-3)">${esc(m[2] || '')}</td></tr>`).join('')}</tbody></table></details>
+    </div>`).join('')}
+    <div class="card" style="margin-top:18px"><div class="card-h"><h2>확인 방법</h2></div>
+      <p style="font-size:13px;color:var(--text-2);margin:0">script 에 <code>data-debug="true"</code> 를 붙이고 게임을 열면 브라우저 콘솔에 <code>[GameTracker]</code> 로그가 찍힙니다. 콘솔에서 <code>GameTracker.info()</code> 로 방문자 ID와 플레이 시간을 볼 수 있습니다. 1–2분 뒤 이 대시보드를 새로고침하면 숫자가 보입니다.</p></div>
+  `;
+  view.querySelectorAll('.copy').forEach(b => b.onclick = async () => {
+    const t = b.parentElement.textContent.replace(/^복사(됨)?/, '');
+    try { await navigator.clipboard.writeText(t); b.textContent = '복사됨'; } catch (e) { b.textContent = '선택 후 Ctrl+C'; }
+    setTimeout(() => b.textContent = '복사', 1500);
+  });
+}
+
+/* =====================================================================
+   라우팅
+   ===================================================================== */
+let renderSeq = 0;
+async function route() {
+  const seq = ++renderSeq;
+  const h = location.hash.slice(1) || 'overview';
+  renderNav(); renderConn(); hideTip();
+  $('#side').classList.remove('open');
+  $('#range').style.visibility = h === 'guide' ? 'hidden' : '';
+  try {
+    if (h === 'guide') viewGuide();
+    else if (h.startsWith('game-')) await viewGame(unslug(h.slice(5)));
+    else await viewOverview();
+  } catch (e) {
+    if (seq === renderSeq) view.innerHTML = `<div class="card"><div class="empty">데이터를 불러오지 못했습니다.<br>${esc(state.liveError || e.message)}<br><br><button class="btn" onclick="openModal()">연결 설정 열기</button> <button class="btn" onclick="useDemo()">데모 데이터로 보기</button></div></div>`;
+    console.error(e);
+  }
+}
+addEventListener('hashchange', route);
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(route, 250); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', route);
+
+document.querySelectorAll('#range button').forEach(b => {
+  b.classList.toggle('on', +b.dataset.d === state.days);
+  b.onclick = () => { state.days = +b.dataset.d; LS.set('ga_days', state.days); state.overviewCache = null; document.querySelectorAll('#range button').forEach(x => x.classList.toggle('on', x === b)); route(); };
+});
+$('#menuBtn').onclick = () => $('#side').classList.toggle('open');
+
+/* =====================================================================
+   연결 모달
+   ===================================================================== */
+const modal = $('#modalBg'), msg = $('#mMsg');
+function openModal() {
+  $('#fUrl').value = state.cfg.url || ''; $('#fKey').value = state.cfg.key || '';
+  $('#fEmail').value = state.auth?.email || ''; $('#fPw').value = '';
+  msg.textContent = state.mode === 'live' && state.auth ? `${state.auth.email} 로 연결됨` : ''; msg.className = 'msg ok';
+  modal.classList.add('show'); $('#fUrl').focus();
+}
+function useDemo() { state.mode = 'demo'; state.liveError = null; state.overviewCache = null; modal.classList.remove('show'); route(); }
+window.openModal = openModal; window.useDemo = useDemo;
+$('#connPill').onclick = openModal;
+$('#mClose').onclick = () => modal.classList.remove('show');
+modal.onclick = e => { if (e.target === modal) modal.classList.remove('show'); };
+addEventListener('keydown', e => { if (e.key === 'Escape') modal.classList.remove('show'); });
+$('#mDemo').onclick = useDemo;
+$('#mLogout').onclick = () => { state.auth = null; LS.del('ga_auth'); useDemo(); };
+$('#mLogin').onclick = async () => {
+  const url = $('#fUrl').value.trim().replace(/\/+$/, ''), key = $('#fKey').value.trim(), email = $('#fEmail').value.trim(), pw = $('#fPw').value;
+  if (!/^https:\/\/.+/.test(url) || !key) { msg.className = 'msg err'; msg.textContent = 'Project URL 과 키를 확인하세요.'; return; }
+  state.cfg = { url, key }; LS.set('ga_cfg', state.cfg);
+  if (!email || !pw) {
+    if (state.auth) { state.mode = 'live'; state.overviewCache = null; modal.classList.remove('show'); route(); return; }
+    msg.className = 'msg err'; msg.textContent = '이메일과 비밀번호를 넣으세요. (주소와 키는 저장했습니다)'; return;
+  }
+  msg.className = 'msg'; msg.textContent = '로그인 중…';
+  try {
+    state.auth = await Live.login(url, key, email, pw); LS.set('ga_auth', state.auth);
+    state.mode = 'live';
+    const ok = await Live.isAdmin();
+    if (!ok) { msg.className = 'msg err'; msg.textContent = '로그인은 됐지만 관리자 등록이 안 되어 있습니다. 가이드 3단계의 SQL 을 실행하세요.'; return; }
+    msg.className = 'msg ok'; msg.textContent = '연결됐습니다.';
+    state.liveError = null; state.overviewCache = null;
+    setTimeout(() => { modal.classList.remove('show'); route(); }, 400);
+  } catch (e) {
+    msg.className = 'msg err';
+    msg.textContent = e instanceof TypeError ? '서버에 닿지 못했습니다. 주소를 확인하세요. (claude.ai 미리보기 안에서는 외부 연결이 막혀 있습니다 — GitHub Pages 에 올린 대시보드에서 연결하세요)' : e.message;
+  }
+};
+
+route();
+</script>
+</body>
+</html>
