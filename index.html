@@ -229,17 +229,13 @@ code{font-family:var(--mono);font-size:12px;background:var(--surface-2);padding:
    ===================================================================== */
 const GAMES = [
   { id:'waiting', name:'웨이팅 이상현상', url:'https://taehyun1221s.github.io/waiting/', engine:'HTML 단일 파일',
-    file:'index.html',
-    ms:[[1,'챕터 1 시작',"startChapter(ch, mode) 맨 앞 (ch===1, 스토리 모드)"],
-        [2,'챕터 2 시작',"startChapter(ch, mode) 맨 앞 (ch===2)"],
-        [3,'클리어',"showClear() 맨 앞"],
-        [4,'무한 모드 시작',"startChapter(ch, mode) 맨 앞 (mode==='endless')"]],
+    file:'index.html', final:4,
+    ms:[[1,'챕터 1 시작','startChapter(ch, mode)'],[2,'챕터 1 클리어','showClear()'],[3,'챕터 2 시작',''],[4,'챕터 2 클리어',''],[5,'무한 모드 시작',"mode==='endless'"]],
     code:`// startChapter(ch, mode) 함수 첫 줄에
-if (mode === 'endless') GameTracker.milestone('무한 모드 시작', 4);
-else GameTracker.milestone('챕터 ' + ch + ' 시작', ch);
+window.GameTracker && GameTracker.milestone(mode === 'endless' ? '무한 모드 시작' : '챕터 ' + ch + ' 시작', mode === 'endless' ? 5 : ch * 2 - 1);
 
 // showClear() 함수 첫 줄에
-GameTracker.milestone('클리어', 3);` },
+window.GameTracker && GameTracker.milestone('챕터 ' + G.ch + ' 클리어', G.ch * 2);` },
   { id:'flip_it_all', name:'다 세워버려', url:'https://taehyun1221s.github.io/flip_it_all/', engine:'HTML 단일 파일',
     file:'index.html',
     ms:[...Array.from({length:25},(_,i)=>[i+1,'스테이지 '+(i+1),i===0?'startLevel(idx) 맨 앞 (idx는 0부터)':'']),[26,'엔딩','startEnding() 맨 앞']],
@@ -250,7 +246,7 @@ GameTracker.milestone('스테이지 ' + (idx + 1), idx + 1);
 GameTracker.milestone('엔딩', 26);` },
   { id:'seller_of_the_border', name:'국경의 장사꾼', url:'https://sunny8197783.github.io/SellerOfTheBorder/', engine:'HTML 단일 파일',
     file:'index.html',
-    ms:[[1,'게임 시작','startGame()'],[2,'1일차','showDay() — G.day 0부터'],[3,'2일차',''],[4,'3일차',''],[5,'4일차',''],[6,'5일차',''],[7,'6일차',''],[8,'7일차',''],[99,'엔딩','showEnd(kind) — 엔딩 종류는 이름에']],
+    ms:[[1,'게임 시작','startGame()'],[2,'1일차','showDay() — G.day 0부터'],[3,'2일차',''],[4,'3일차',''],[5,'4일차',''],[6,'5일차',''],[99,'엔딩','showEnd(kind) — 엔딩 종류는 이름에']],
     code:`// startGame() 첫 줄에
 GameTracker.milestone('게임 시작', 1);
 
@@ -326,7 +322,8 @@ const LS = {
 };
 const state = {
   days: LS.get('ga_days', 14),
-  cfg: LS.get('ga_cfg', { url:'', key:'' }),
+  // 공개 키라서 페이지에 넣어도 안전합니다 (읽기는 관리자 로그인으로만 가능)
+  cfg: LS.get('ga_cfg', { url:'https://okrgwnvlsissnenkznhf.supabase.co', key:'sb_publishable_LiRvhvhJk1Gb0icL9RJ7vA_uO4Ckf13' }),
   auth: LS.get('ga_auth', null),
   mode: 'demo',          // 'demo' | 'live'
   liveError: null,
@@ -740,7 +737,7 @@ async function viewGame(id) {
   }
   const last = fun.length > 1 ? fun[fun.length - 1] : null;
   const V = Number(o.visitors);
-  const finalStep = Math.max(...g.ms.map(m => m[0]));
+  const finalStep = g.final ?? Math.max(...g.ms.map(m => m[0]));
   const finished = !!last && Number(last.step) >= finalStep;
 
   view.innerHTML = `
