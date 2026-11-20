@@ -1505,7 +1505,9 @@ async function route() {
   }
 }
 addEventListener('hashchange', route);
-let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(route, 250); });
+// 휴대폰은 스크롤할 때 주소창이 숨었다 나오면서 높이만 바뀜 → 그때는 다시 그리지 않음 (가로 폭이 바뀔 때만)
+let rz, lastW = innerWidth;
+addEventListener('resize', () => { if (Math.abs(innerWidth - lastW) < 40) return; lastW = innerWidth; clearTimeout(rz); rz = setTimeout(() => { const h = location.hash.slice(1); if (h === 'sms' || h === 'testers' || h.startsWith('tester-') || h === 'guide') return; route(); }, 250); });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', route);
 
 document.querySelectorAll('#range button').forEach(b => {
