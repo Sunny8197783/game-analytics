@@ -14,7 +14,7 @@ game-analytics/
 ## 설치 (약 15분)
 
 1. **Supabase** 무료 프로젝트 생성 (지역: Seoul)
-2. SQL Editor → `supabase/schema.sql` 전체 붙여넣고 **Run**, 이어서 `supabase/players.sql` 도 **Run** (플레이어·구간 분석)
+2. SQL Editor → `supabase/schema.sql` 전체 붙여넣고 **Run**, 이어서 `supabase/players.sql`, `supabase/testers.sql` 도 차례로 **Run** (플레이어·구간 분석, 베타 테스터 코드)
 3. Authentication → Users → **Add user** 로 내 계정 생성 후 SQL Editor 에서
    ```sql
    insert into public.admins (user_id)
@@ -50,3 +50,10 @@ game-analytics/
 
 - claude.ai 안에서 여는 미리보기는 외부 DB 연결이 막혀 데모 데이터만 보입니다. 실제 연결은 GitHub Pages 에 올린 주소에서 하세요.
 - 무료 플랜 DB 500MB 기준, 15초 하트비트로 약 수백만 행(수만 시간 플레이)까지 충분합니다.
+
+## 베타 테스터 입장 코드
+
+- 트래커가 들어간 모든 게임은 시작 전에 **베타 테스터 코드(XXXX-XXXX)** 를 물어봅니다. 게임 코드는 수정하지 않고, 트래커가 게임 위에 입장 화면을 띄우고 그동안 게임으로 가는 입력만 막습니다.
+- 기기·게임마다 한 번 통과하면 기억합니다. 대시보드에서 코드를 **중지**하면 다음 접속부터 다시 막힙니다.
+- 대시보드 **베타 테스터** 화면: 30명 × 8게임 플레이 시간표, 이름 바로 고치기, 코드·안내문 복사, 추가 발급, 틀린 코드 시도 기록.
+- 입장 화면을 끄려면 그 게임 script 태그에 `data-gate="off"`.

@@ -217,6 +217,22 @@ code{font-family:var(--mono);font-size:12px;background:var(--surface-2);padding:
 .back{font-size:13px;color:var(--text-2);text-decoration:none;display:inline-block;margin-bottom:10px}
 .back:hover{color:var(--text)}
 .pager{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:12px;font-size:12.5px;color:var(--text-3)}
+.tmx td.cell{padding:4px;text-align:center}
+.tmx .c{display:block;border-radius:5px;padding:5px 2px;font-family:var(--mono);font-size:11.5px;min-width:54px;color:var(--text)}
+.tmx .c.z{color:var(--text-3)}
+.tmx th.g{font-size:11px;white-space:normal;line-height:1.25;text-align:center;min-width:64px;max-width:90px}
+.tmx td.nm{min-width:150px}
+.tmx td.nm input{all:unset;font-weight:600;font-size:13px;width:100%;border-bottom:1px dashed transparent;cursor:text}
+.tmx td.nm input:hover,.tmx td.nm input:focus{border-bottom-color:var(--line-strong)}
+.tmx td.nm small{display:block;color:var(--text-3);font-size:11px}
+.code{font-family:var(--mono);font-size:12.5px;letter-spacing:.04em;cursor:pointer;border:1px dashed transparent;border-radius:4px;padding:1px 4px}
+.code:hover{border-color:var(--line-strong)}
+.tbtn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:2px 8px;font-size:11.5px;cursor:pointer;color:var(--text-2)}
+.tbtn.off{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,var(--line))}
+.seq-legend{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2)}
+.seq-legend .ramp{display:flex;gap:2px}.seq-legend .ramp i{width:22px;height:10px;border-radius:2px}
+textarea.add{width:100%;min-height:96px;border:1px solid var(--line-strong);background:var(--bg);border-radius:8px;padding:8px 10px;font:13px var(--sans);resize:vertical}
+.tag-t{display:inline-block;font-size:11px;padding:1px 6px;border-radius:4px;background:var(--surface-2);color:var(--text-2);margin-left:6px;text-decoration:none}
 .menu-btn{display:none}
 @media (max-width:900px){
   .app{grid-template-columns:1fr}
@@ -422,7 +438,7 @@ const Live = {
     if (!state.auth) throw new Error('로그인이 필요합니다.');
     if (Date.now() > state.auth.expires_at - 60000) await Live.refresh();
     const { url, key } = state.cfg;
-    const r = await fetch(url + path, { ...opts, headers:{ apikey:key, Authorization:'Bearer ' + state.auth.access_token, 'Content-Type':'application/json', ...(opts.headers || {}) } });
+    const r = await fetch(url + path, { ...opts, headers:{ apikey:key, Authorization:'Bearer ' + state.auth.access_token, 'Content-Type':'application/json', Prefer:'return=representation', ...(opts.headers || {}) } });
     if (!r.ok) {
       const t = await r.text();
       let m = t; try { m = JSON.parse(t).message || t; } catch (e) {}
@@ -438,11 +454,25 @@ const Live = {
   dwell: (g, r) => Live.rpc('analytics_dwell_hist', { p_game:g, p_from:Live.iso(r.from), p_to:Live.iso(r.to) }),
   freq: (g, r) => Live.rpc('analytics_visit_freq', { p_game:g, p_from:Live.iso(r.from), p_to:Live.iso(r.to) }),
   sessions: (g, r) => Live.rpc('analytics_sessions', { p_game:g, p_from:Live.iso(r.from), p_to:Live.iso(r.to), p_limit:100 }),
+  testers: () => Live.rpc('analytics_testers', {}),
+  badCodes: (r) => Live.rpc('analytics_bad_codes', { p_from:Live.iso(r.from), p_to:Live.iso(r.to) }),
+  createTesters: (rows) => Live.req('/rest/v1/testers', { method:'POST', body: JSON.stringify(rows) }),
+  updateTester: (code, patch) => Live.req('/rest/v1/testers?code=eq.' + encodeURIComponent(code), { method:'PATCH', body: JSON.stringify(patch) }),
+  deleteTester: (code) => Live.req('/rest/v1/testers?code=eq.' + encodeURIComponent(code), { method:'DELETE' }),
   players: (g, r) => Live.rpc('analytics_players', { p_game:g, p_from:Live.iso(r.from), p_to:Live.iso(r.to), p_limit:2000 }),
   segments: (g, r) => Live.rpc('analytics_segments', { p_game:g, p_from:Live.iso(r.from), p_to:Live.iso(r.to) }),
   playerDetail: (g, v) => Live.rpc('analytics_player_detail', { p_game:g, p_visitor:v }),
   isAdmin: () => Live.req('/rest/v1/admins?select=user_id').then(a => a.length > 0),
 };
+
+/* 테스터 코드: 헷갈리는 글자(0 O 1 I L) 없이 8자리 → XXXX-XXXX */
+const CODE_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+function makeCode(rand) {
+  let c = '';
+  if (!rand && window.crypto && crypto.getRandomValues) { const a = new Uint32Array(8); crypto.getRandomValues(a); a.forEach(x => c += CODE_ABC[x % CODE_ABC.length]); }
+  else for (let i = 0; i < 8; i++) c += CODE_ABC[Math.floor((rand || Math.random)() * CODE_ABC.length)];
+  return c.slice(0, 4) + '-' + c.slice(4);
+}
 
 /* =====================================================================
    DEMO 데이터 : 실제 DB 와 같은 규칙으로 계산 (schema.sql 의 함수와 동일)
@@ -563,7 +593,8 @@ const Demo = (() => {
     const no = {}; const rows = all.map(s => ({ ...s, visit_no: (no[s.vid] = (no[s.vid] || 0) + 1) }));
     return rows.reverse().slice(0, 100).map(s => ({
       session_id:s.sid, visitor_id: pid(s.vid), started_at:new Date(s.t).toISOString(),
-      dwell_sec:Math.round(s.dwell / 1000), last_milestone:s.last, max_step:s.maxStep, device:s.device, visit_no:s.visit_no }));
+      dwell_sec:Math.round(s.dwell / 1000), last_milestone:s.last, max_step:s.maxStep, device:s.device, visit_no:s.visit_no,
+      tester_code:testerOf[s.vid] || null, tester_name:tname(testerOf[s.vid]) }));
   }
   function h32(s) { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return (h >>> 0).toString(16).padStart(8, '0'); }
   const vidOf = {};
@@ -580,6 +611,33 @@ const Demo = (() => {
     const pts = [{ step:0, name:'접속', t:0 }, ...Object.values(first)].sort((a, b) => a.t - b.t || a.step - b.step);
     return { end, segs: pts.map((p, i) => ({ step:p.step, name:p.name, at_ms:Math.round(p.t), ms:Math.round(Math.max(0, (i < pts.length - 1 ? pts[i + 1].t : end) - p.t)), exit:i === pts.length - 1 })) };
   }
+  // 데모 베타 테스터 30명 : 일부 방문자를 테스터로 연결
+  const DEMO_TESTERS = Array.from({ length:30 }, (_, i) => ({ code:makeCode(R), name:'테스터 ' + String(i + 1).padStart(2, '0'), memo:null, active:i !== 27, created_at:new Date(now - 6 * DAY).toISOString() }));
+  const testerOf = {};
+  DEMO_TESTERS.forEach((t, i) => {
+    if (i >= 26) return;                      // 4명은 아직 안 들어옴
+    const n = 1 + Math.floor(R() * 6);
+    GAMES.filter(g => g.url).sort(() => R() - .5).slice(0, n).forEach(g => {
+      const cand = sessions.filter(s => s.game === g.id && !testerOf[s.vid] && now - s.t < 6 * DAY);
+      if (cand.length) testerOf[cand[Math.floor(R() * cand.length)].vid] = t.code;
+    });
+  });
+  const tname = code => (DEMO_TESTERS.find(t => t.code === code) || {}).name || null;
+  function testers() {
+    return DEMO_TESTERS.map(t => {
+      const vids = Object.keys(testerOf).filter(v => testerOf[v] === t.code);
+      const games = vids.map(v => { const ss = sessBy[v].filter(s => s.t < now), rs = (reachBy[v] || []).filter(x => x.t < now).sort((a, b) => b.total - a.total);
+        return { game_id:ss[0].game, total_ms:Math.round(ss.reduce((a, s) => a + s.dwell, 0)), first_at:new Date(ss[0].t).toISOString(), last_at:new Date(Math.max(...ss.map(s => s.t + s.dwell))).toISOString(),
+          sessions:ss.length, max_step:rs.length ? Math.max(...rs.map(x => x.step)) : null, last_milestone:rs.length ? rs[0].name : null, devices:1, visitors:[pid(v)] }; })
+        .sort((a, b) => b.last_at.localeCompare(a.last_at));
+      return { ...t, games, ok_entries:games.reduce((a, x) => a + x.sessions, 0), failed_entries:t.active ? 0 : 2,
+        last_seen:games.length ? games[0].last_at : null, total_ms:games.length ? games.reduce((a, x) => a + x.total_ms, 0) : null };
+    });
+  }
+  function badCodes() { return [{ code:'K7QM-3XP4', game_id:'waiting', tries:3, visitors:1, last_at:new Date(now - 3600000).toISOString() }, { code:DEMO_TESTERS[27].code, game_id:'flip_it_all', tries:2, visitors:1, last_at:new Date(now - 7200000).toISOString() }]; }
+  function createTesters(rows) { rows.forEach(r => DEMO_TESTERS.unshift({ ...r, memo:r.memo || null, active:true, created_at:new Date().toISOString() })); return rows; }
+  function updateTester(code, patch) { const t = DEMO_TESTERS.find(x => x.code === code); Object.assign(t, patch); return [t]; }
+  function deleteTester(code) { const i = DEMO_TESTERS.findIndex(x => x.code === code); if (i >= 0) DEMO_TESTERS.splice(i, 1); Object.keys(testerOf).forEach(v => { if (testerOf[v] === code) delete testerOf[v]; }); return []; }
   const activeVids = (g, r) => [...new Set(sessions.filter(s => s.game === g && inR(s, r)).map(s => s.vid))];
   function players(g, r) {
     return activeVids(g, r).map(vid => {
@@ -589,7 +647,8 @@ const Demo = (() => {
       const lastSeg = segs[segs.length - 1];
       return { visitor_id:pid(vid), first_seen:new Date(ss[0].t).toISOString(), last_seen:new Date(Math.max(...ss.map(s => s.t + s.dwell))).toISOString(),
         sessions:ss.length, total_ms:Math.round(end), max_step:rs.length ? Math.max(...rs.map(x => x.step)) : null, last_milestone:rs.length ? rs[0].name : null,
-        last_segment_ms:lastSeg.ms, device:Object.entries(dev).sort((a, b) => b[1] - a[1])[0][0], referrer:null, segments:segs };
+        last_segment_ms:lastSeg.ms, device:Object.entries(dev).sort((a, b) => b[1] - a[1])[0][0], referrer:null, segments:segs,
+        tester_code:testerOf[vid] || null, tester_name:tname(testerOf[vid]) };
     }).sort((a, b) => b.last_seen.localeCompare(a.last_seen));
   }
   function segments(g, r) {
@@ -605,11 +664,12 @@ const Demo = (() => {
     return {
       sessions: ss.map(s => ({ session_id:s.sid, started_at:new Date(s.t).toISOString(), last_seen_at:new Date(s.t + s.dwell).toISOString(), dwell_ms:Math.round(s.dwell), device:s.device, referrer:null, start_total_ms:Math.round(s.startTotal) })),
       milestones: (reachBy[vid] || []).filter(x => x.t < now).sort((a, b) => a.total - b.total).map(x => ({ session_id:x.sid, step:x.step, name:x.name, elapsed_ms:Math.round(x.el), total_ms:Math.round(x.total), at:new Date(x.t + x.el).toISOString() })),
-      total_ms: Math.round(ss.reduce((a, s) => a + s.dwell, 0)) };
+      total_ms: Math.round(ss.reduce((a, s) => a + s.dwell, 0)), tester_code:testerOf[vid] || null, tester_name:tname(testerOf[vid]) };
   }
   const later = f => (...a) => new Promise(res => setTimeout(() => res(f(...a)), 60));
   return { overview:later(overview), daily:later(daily), funnel:later(funnel), dwell:later(dwell), freq:later(freq), sessions:later(list),
-           players:later(players), segments:later(segments), playerDetail:later(playerDetail) };
+           players:later(players), segments:later(segments), playerDetail:later(playerDetail),
+           testers:later(testers), badCodes:later(badCodes), createTesters:later(createTesters), updateTester:later(updateTester), deleteTester:later(deleteTester) };
 })();
 
 const api = () => state.mode === 'live' ? Live : Demo;
@@ -736,6 +796,7 @@ function renderNav() {
     `<a href="#overview" class="${cur === 'overview' ? 'on' : ''}">전체 개요</a>` +
     `<div class="nav-label">게임</div>` +
     GAMES.map(g => `<a href="#game-${slug(g.id)}" class="${[ 'game-', 'players-' ].some(p => cur === p + slug(g.id)) || cur.startsWith('player-' + slug(g.id) + '--') ? 'on' : ''}"><span>${esc(g.name)}</span>${cnt(g.id) ? `<span class="cnt">${cnt(g.id)}</span>` : (g.url ? '' : '<span class="tag">링크 없음</span>')}</a>`).join('') +
+    `<div class="nav-label">베타 테스트</div><a href="#testers" class="${cur === 'testers' || cur.startsWith('tester-') ? 'on' : ''}"><span>베타 테스터</span>${state.testerCount ? `<span class="cnt">${state.testerCount}</span>` : ''}</a>` +
     `<div class="nav-label">설정</div><a href="#guide" class="${cur === 'guide' ? 'on' : ''}">설치 가이드</a>`;
 }
 
@@ -912,8 +973,8 @@ async function viewGame(id) {
 
   // sessions
   let shown = 20;
-  const drawSess = () => { $('#sessTable').innerHTML = list.length ? `<div class="tbl-wrap"><table><thead><tr><th>시작</th><th>방문자</th><th>몇 번째 방문</th><th>체류</th><th style="text-align:left">마지막 마일스톤</th><th>기기</th></tr></thead><tbody>${
-    list.slice(0, shown).map(s => `<tr><td class="l num">${fmtTime(s.started_at)}</td><td class="num"><a class="pid" href="#player-${slug(g.id)}--${esc(s.visitor_id)}">${esc(String(s.visitor_id).slice(0, 6))}</a></td><td class="num">${s.visit_no}번째</td><td class="num">${fmtDur(s.dwell_sec)}</td><td class="l">${esc(s.last_milestone || '–')}</td><td>${({ mobile:'모바일', desktop:'PC', tablet:'태블릿' })[s.device] || '–'}</td></tr>`).join('')
+  const drawSess = () => { $('#sessTable').innerHTML = list.length ? `<div class="tbl-wrap"><table><thead><tr><th>시작</th><th>방문자</th><th style="text-align:left">테스터</th><th>몇 번째 방문</th><th>체류</th><th style="text-align:left">마지막 마일스톤</th><th>기기</th></tr></thead><tbody>${
+    list.slice(0, shown).map(s => `<tr><td class="l num">${fmtTime(s.started_at)}</td><td class="num"><a class="pid" href="#player-${slug(g.id)}--${esc(s.visitor_id)}">${esc(String(s.visitor_id).slice(0, 6))}</a></td><td class="l">${s.tester_code ? `<a href="#tester-${esc(s.tester_code)}" style="color:inherit">${esc(s.tester_name || s.tester_code)}</a>` : '<span style="color:var(--text-3)">–</span>'}</td><td class="num">${s.visit_no}번째</td><td class="num">${fmtDur(s.dwell_sec)}</td><td class="l">${esc(s.last_milestone || '–')}</td><td>${({ mobile:'모바일', desktop:'PC', tablet:'태블릿' })[s.device] || '–'}</td></tr>`).join('')
   }</tbody></table></div>${shown < list.length ? `<div style="text-align:center;margin-top:12px"><button class="btn" id="moreSess">더 보기 (${list.length - shown}건)</button></div>` : ''}` : '<div class="empty">기록 없음</div>';
     const mb = $('#moreSess'); if (mb) mb.onclick = () => { shown += 40; drawSess(); }; };
   drawSess();
@@ -945,6 +1006,11 @@ function viewGuide() {
       <div class="step"><h3>각 게임에 트래커 넣기</h3>
         <p>게임 <code>index.html</code> 의 <code>&lt;/body&gt;</code> 바로 위에 아래 한 줄. 이것만으로 <b>방문자·접속 횟수·체류시간</b>이 쌓입니다. ${state.cfg.url ? '(연결 정보가 이미 채워져 있습니다)' : '(DB 연결 후 이 페이지를 다시 열면 주소와 키가 채워집니다)'}</p>
         <p>그다음 아래 게임별 코드로 <b>마일스톤</b>을 넣으면 이탈 지점이 보입니다. step 숫자는 <b>진행할수록 커지게</b>만 정하면 됩니다.</p></div>
+      <div class="step"><h3>베타 테스터 입장 코드 (자동)</h3>
+        <p>트래커가 들어간 게임은 열 때 <b>베타 테스터 코드 입력 화면</b>이 먼저 뜹니다. 게임 코드는 건드리지 않고, 입장 전에는 게임 쪽으로 가는 키보드·마우스·터치 입력만 막습니다.</p>
+        <ul><li>기기·게임마다 한 번 통과하면 다음부터는 묻지 않습니다. 코드를 중지하면 다음 접속부터 다시 막힙니다.</li>
+        <li>코드 발급·이름 변경·중지는 <a href="#testers">베타 테스터</a> 화면에서 합니다.</li>
+        <li>입장 화면을 끄려면 그 게임 script 태그에 <code>data-gate="off"</code> 를 붙이세요.</li></ul></div>
     </div>
     <h2 style="font-size:16px;margin:26px 0 12px">게임별 설치 코드</h2>
     ${GAMES.map(g => `<div class="gcard" id="g-${slug(g.id)}">
@@ -1057,7 +1123,7 @@ async function viewPlayers(id) {
     </div>
     <section class="card">
       <div class="filters">
-        <input id="pq" placeholder="ID 검색" value="${esc(PV.q)}" aria-label="플레이어 ID 검색">
+        <input id="pq" placeholder="ID·테스터 검색" value="${esc(PV.q)}" aria-label="플레이어 ID 검색">
         ${['all', 'active', 'done', 'idle', 'gone'].map(k => `<button class="chip ${PV.st === k ? 'on' : ''}" data-st="${k}" title="${ST_HELP[k] || ''}">${k === 'all' ? '전체' : ST[k]}<span class="n">${fmtN(cnt[k])}</span></button>`).join('')}
         <span style="flex:1"></span>
         <select id="psort" aria-label="정렬">
@@ -1069,17 +1135,18 @@ async function viewPlayers(id) {
     </section>`;
   const draw = () => {
     const q = PV.q.trim().toLowerCase();
-    let rows = list.filter(p => (PV.st === 'all' || p.status === PV.st) && (!q || String(p.visitor_id).toLowerCase().includes(q)));
+    let rows = list.filter(p => (PV.st === 'all' || p.status === PV.st) && (!q || [p.visitor_id, p.tester_code, p.tester_name].some(x => String(x || '').toLowerCase().includes(q))));
     const k = PV.sort;
     rows.sort((a, b) => k === 'first_seen' ? Date.parse(a.first_seen) - Date.parse(b.first_seen) : k === 'last_seen' ? Date.parse(b.last_seen) - Date.parse(a.last_seen) : (Number(b[k] ?? -1) - Number(a[k] ?? -1)));
     const per = 50, pages = Math.max(1, Math.ceil(rows.length / per)); PV.page = Math.min(PV.page, pages - 1);
     const page = rows.slice(PV.page * per, PV.page * per + per);
     const maxT = Math.max(1, ...page.map(p => p.total_ms));
-    $('#ptable').innerHTML = rows.length ? `<div class="tbl-wrap"><table><thead><tr><th>플레이어</th><th style="text-align:left">상태</th><th>첫 방문</th><th>마지막 방문</th><th>접속</th><th>총 플레이</th><th style="text-align:left">최종 지점</th><th>마지막 구간</th><th style="text-align:left;min-width:260px">여정</th></tr></thead><tbody>${
+    $('#ptable').innerHTML = rows.length ? `<div class="tbl-wrap"><table><thead><tr><th>플레이어</th><th style="text-align:left">테스터</th><th style="text-align:left">상태</th><th>첫 방문</th><th>마지막 방문</th><th>접속</th><th>총 플레이</th><th style="text-align:left">최종 지점</th><th>마지막 구간</th><th style="text-align:left;min-width:260px">여정</th></tr></thead><tbody>${
       page.map((p, i) => {
         const segs = p.segments || [], lk = lastKind(p.status);
         return `<tr class="click" data-id="${esc(p.visitor_id)}">
           <td class="l"><a class="pid" href="#player-${slug(g.id)}--${esc(p.visitor_id)}">${short(p.visitor_id)}</a></td>
+          <td class="l">${p.tester_code ? `<a href="#tester-${esc(p.tester_code)}" style="color:inherit;text-decoration:none"><b style="font-weight:600">${esc(p.tester_name || '')}</b> <span class="num" style="color:var(--text-3);font-size:11.5px">${esc(p.tester_code)}</span></a>` : '<span style="color:var(--text-3)">–</span>'}</td>
           <td class="l">${stHTML(p.status)}</td>
           <td class="num">${fmtTime(p.first_seen)}</td><td class="num" title="${fmtTime(p.last_seen)}">${ago(p.last_seen)}</td>
           <td class="num">${fmtN(p.sessions)}</td><td class="num">${fmtDur(p.total_ms / 1000)}</td>
@@ -1132,6 +1199,7 @@ async function viewPlayer(id, vid) {
   const fin = finalOf(g);
   const longestSeg = segs.filter(x => !x.exit || st !== 'done').reduce((a, x) => x.ms > (a?.ms ?? -1) ? x : a, null);
 
+  if (d.tester_code) setTitle(`${d.tester_name || '테스터'} · ${short(vid)}`, `${esc(g.name)} · 베타 테스터 <a class="num" href="#tester-${esc(d.tester_code)}">${esc(d.tester_code)}</a> · ID <span class="num">${esc(vid)}</span>`);
   view.innerHTML = `<a class="back" href="#players-${sl}">← ${esc(g.name)} 플레이어 목록</a>
     <div class="kpis">
       <div class="kpi"><div class="l">상태</div><div class="v" style="font-size:20px;font-family:var(--sans)">${stHTML(st)}</div><div class="d">${ST_HELP[st]} · ${devs || '기기 정보 없음'}</div></div>
@@ -1191,6 +1259,187 @@ async function viewPlayer(id, vid) {
 }
 
 /* =====================================================================
+   베타 테스터
+   ===================================================================== */
+function toastMsg(t, bad) {
+  const el = document.createElement('div');
+  el.textContent = t;
+  el.style.cssText = `position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60;background:${bad ? 'var(--bad)' : 'var(--accent)'};color:var(--surface);padding:9px 16px;border-radius:99px;font-size:13px;box-shadow:0 6px 24px rgba(0,0,0,.2);transition:opacity .3s`;
+  document.body.appendChild(el);
+  setTimeout(() => el.style.opacity = '0', 1600); setTimeout(() => el.remove(), 2000);
+}
+async function copyText(t, what) {
+  try { await navigator.clipboard.writeText(t); toastMsg((what || '') + ' 복사했습니다'); }
+  catch (e) {
+    const ta = document.createElement('textarea'); ta.value = t; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toastMsg((what || '') + ' 복사했습니다'); } catch (x) { toastMsg('복사하지 못했습니다. 직접 선택해서 복사하세요', true); }
+    ta.remove();
+  }
+}
+const SHORT_NAME = { waiting:'웨이팅', flip_it_all:'다 세워버려', seller_of_the_border:'국경의 장사꾼', disaster_hero:'재앙의 용사', highrise_cleaner:'고층 세척', jurassic_brawl:'쥬라기', my_pet_hero:'개는 영웅', planet_battle:'행성 공방' };
+function inviteText(t) {
+  return `[베타 테스트 안내]\n${t.name}님의 참가 코드: ${t.code}\n\n게임을 처음 열 때 이 코드를 한 번 입력하면 됩니다. (게임마다 1번씩)\n\n` +
+    GAMES.filter(g => g.url).map(g => `· ${g.name}\n  ${g.url}`).join('\n') + `\n\n코드는 본인만 사용해 주세요.`;
+}
+function heat(ms) {   // 플레이 시간 → 단계 (한 가지 색, 진할수록 오래)
+  if (!ms) return '';
+  const m = ms / 60000, lv = m < 5 ? 18 : m < 20 ? 38 : m < 60 ? 62 : 88;
+  return `background:color-mix(in srgb,var(--series-1) ${lv}%,transparent);${lv > 50 ? 'color:#fff' : ''}`;
+}
+const TV = { q:'', sort:'created', st:'all' };
+
+async function viewTesters() {
+  setTitle('베타 테스터', '코드를 입력해야 게임에 들어갈 수 있습니다 · 이름 칸을 눌러 바로 고칠 수 있어요');
+  $('#range').style.visibility = 'hidden';
+  view.innerHTML = '<div class="empty">불러오는 중…</div>';
+  const [list, bad] = await Promise.all([load(() => api().testers()), load(() => api().badCodes(range(30))).catch(() => [])]);
+  state.testerCount = list.length; renderNav();
+  const T = list.map(t => ({ ...t, total_ms:Number(t.total_ms) || 0, gmap:Object.fromEntries((t.games || []).map(x => [x.game_id, x])) }));
+  // 번호: 만든 순서, 같은 때 만들었으면 이름순 (테스터 01, 02 …)
+  [...T].sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)) || a.name.localeCompare(b.name, 'ko', { numeric:true })).forEach((t, i) => t.no = i + 1);
+  const active = T.filter(t => t.active).length, played = T.filter(t => t.games.length).length;
+  const totalH = T.reduce((a, t) => a + t.total_ms, 0) / 3600000;
+  const webGames = GAMES;
+  view.innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><div class="l">테스터</div><div class="v">${fmtN(T.length)}<small>명</small></div><div class="d">사용 중 ${active} · 중지 ${T.length - active}</div></div>
+      <div class="kpi"><div class="l">한 번이라도 들어온 사람</div><div class="v">${played}<small>/${T.length}</small></div><div class="d">아직 안 들어옴 ${T.length - played}명</div></div>
+      <div class="kpi"><div class="l">테스터 총 플레이</div><div class="v">${fmtN(Math.round(totalH * 10) / 10)}<small>시간</small></div><div class="d">들어온 사람 1인당 ${played ? fmtDur(totalH * 3600 / played) : '–'}</div></div>
+      <div class="kpi"><div class="l">1인당 해본 게임 수</div><div class="v">${played ? (T.reduce((a, t) => a + t.games.length, 0) / played).toFixed(1) : '–'}<small>/8</small></div><div class="d">들어온 사람 기준</div></div>
+      <div class="kpi"><div class="l">틀린·중지 코드 시도</div><div class="v">${fmtN(bad.reduce((a, b) => a + Number(b.tries), 0))}</div><div class="d">최근 30일</div></div>
+    </div>
+    <section class="card">
+      <div class="card-h"><div style="flex:1"><h2>테스터 × 게임 플레이 시간</h2><p>칸 = 그 게임에서 플레이한 시간 · 칸을 누르면 그 사람의 그 게임 기록으로 · 코드를 누르면 복사</p></div>
+        <button class="btn" id="copyAll">이름·코드 전체 복사</button></div>
+      <div class="filters">
+        <input id="tq" placeholder="이름·코드·메모 검색" value="${esc(TV.q)}" style="font-family:var(--sans)">
+        ${[['all', '전체'], ['in', '들어옴'], ['none', '아직 안 들어옴'], ['off', '중지']].map(([k, l]) => `<button class="chip ${TV.st === k ? 'on' : ''}" data-st="${k}">${l}</button>`).join('')}
+        <span style="flex:1"></span>
+        <div class="seq-legend">짧음<span class="ramp"><i style="${heat(60000)}"></i><i style="${heat(600000)}"></i><i style="${heat(1800000)}"></i><i style="${heat(4000000)}"></i></span>김 <span style="margin-left:6px">(~5분 · ~20분 · ~1시간 · 1시간+)</span></div>
+        <select id="tsort" aria-label="정렬">${[['created', '번호순'], ['total', '총 플레이 긴 순'], ['last', '최근 접속순'], ['games', '해본 게임 많은 순'], ['name', '이름순']].map(([k, l]) => `<option value="${k}" ${TV.sort === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      </div>
+      <div id="tmx"></div>
+    </section>
+    <div class="grid2">
+      <section class="card"><div class="card-h"><div style="flex:1"><h2>테스터 추가</h2><p>한 줄에 한 명 · <code>이름, 메모</code> (메모는 빼도 됨) · 코드는 자동으로 만들어집니다</p></div></div>
+        <textarea class="add" id="addNames" placeholder="홍길동, 디스코드 hong#1234&#10;김민지"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center"><button class="btn primary" id="addBtn">코드 만들기</button><span id="addMsg" style="font-size:12.5px;color:var(--text-3)"></span></div>
+      </section>
+      <section class="card"><div class="card-h"><div style="flex:1"><h2>틀린·중지 코드로 들어오려 한 기록</h2><p>최근 30일 · 오타이거나 코드가 다른 사람에게 퍼졌을 수 있습니다</p></div></div>
+        ${bad.length ? tableHTML(['코드', '게임', '시도', '기기 수', '마지막'], bad.map(b => [b.code, SHORT_NAME[b.game_id] || b.game_id, fmtN(b.tries), fmtN(b.visitors), fmtTime(b.last_at)])) : '<div class="empty">없음</div>'}
+      </section>
+    </div>`;
+
+  const draw = () => {
+    const q = TV.q.trim().toLowerCase();
+    let rows = T.filter(t =>
+      (!q || [t.name, t.code, t.memo].some(x => String(x || '').toLowerCase().includes(q))) &&
+      (TV.st === 'all' || (TV.st === 'in' && t.games.length) || (TV.st === 'none' && !t.games.length) || (TV.st === 'off' && !t.active)));
+    const by = { created:(a, b) => a.no - b.no, total:(a, b) => b.total_ms - a.total_ms, last:(a, b) => String(b.last_seen || '').localeCompare(String(a.last_seen || '')),
+                 games:(a, b) => b.games.length - a.games.length || b.total_ms - a.total_ms, name:(a, b) => a.name.localeCompare(b.name, 'ko') };
+    rows.sort(by[TV.sort]);
+    $('#tmx').innerHTML = rows.length ? `<div class="tbl-wrap"><table class="tmx"><thead><tr><th>#</th><th style="text-align:left">이름</th><th style="text-align:left">코드</th><th style="text-align:left">상태</th>${webGames.map(g => `<th class="g" title="${esc(g.name)}${g.url ? '' : ' (웹 버전 없음)'}" ${g.url ? '' : 'style="opacity:.5"'}>${esc(SHORT_NAME[g.id])}</th>`).join('')}<th>총 플레이</th><th>마지막 접속</th><th></th></tr></thead><tbody>${
+      rows.map(t => `<tr data-code="${esc(t.code)}">
+        <td class="num" style="color:var(--text-3)">${t.no}</td>
+        <td class="l nm"><input value="${esc(t.name)}" maxlength="60" aria-label="이름" data-code="${esc(t.code)}">${t.memo ? `<small>${esc(t.memo)}</small>` : ''}</td>
+        <td class="l"><span class="code" data-copy="${esc(t.code)}" title="눌러서 복사">${esc(t.code)}</span></td>
+        <td class="l"><button class="tbtn ${t.active ? '' : 'off'}" data-toggle="${esc(t.code)}">${t.active ? '사용 중' : '중지됨'}</button></td>
+        ${webGames.map(g => { const x = t.gmap[g.id];
+          return `<td class="cell">${x ? `<a class="c" href="#player-${slug(g.id)}--${esc((x.visitors || [])[0] || '')}" style="${heat(Number(x.total_ms))};text-decoration:none" data-g="${g.id}" data-code="${esc(t.code)}">${fmtDur(Number(x.total_ms) / 1000, true)}</a>` : '<span class="c z">–</span>'}</td>`; }).join('')}
+        <td class="num">${t.total_ms ? fmtDur(t.total_ms / 1000) : '–'}</td>
+        <td class="num" ${t.last_seen ? `title="${fmtTime(t.last_seen)}"` : ''}>${t.last_seen ? ago(t.last_seen) : '<span style="color:var(--text-3)">아직 없음</span>'}</td>
+        <td><a class="tag-t" href="#tester-${esc(t.code)}">상세</a> <button class="tbtn" data-invite="${esc(t.code)}" title="개인 안내문 복사">안내문</button></td>
+      </tr>`).join('')}</tbody></table></div>` : '<div class="empty">조건에 맞는 테스터가 없습니다.</div>';
+    const box = $('#tmx');
+    box.querySelectorAll('[data-copy]').forEach(el => el.onclick = () => copyText(el.dataset.copy, '코드를'));
+    box.querySelectorAll('[data-invite]').forEach(el => el.onclick = () => copyText(inviteText(T.find(t => t.code === el.dataset.invite)), '안내문을'));
+    box.querySelectorAll('[data-toggle]').forEach(el => el.onclick = async () => {
+      const t = T.find(x => x.code === el.dataset.toggle);
+      try { await api().updateTester(t.code, { active:!t.active }); t.active = !t.active; draw(); toastMsg(`${t.name} ${t.active ? '다시 사용' : '중지'}`); }
+      catch (e) { toastMsg('바꾸지 못했습니다: ' + e.message, true); }
+    });
+    box.querySelectorAll('td.nm input').forEach(inp => {
+      inp.onkeydown = e => { if (e.key === 'Enter') inp.blur(); };
+      inp.onchange = async () => {
+        const t = T.find(x => x.code === inp.dataset.code), v = inp.value.trim().slice(0, 60);
+        if (!v) { inp.value = t.name; return; }
+        try { await api().updateTester(t.code, { name:v }); t.name = v; toastMsg('이름을 저장했습니다'); }
+        catch (e) { inp.value = t.name; toastMsg('저장하지 못했습니다: ' + e.message, true); }
+      };
+    });
+    box.querySelectorAll('a.c').forEach(a => {
+      const t = T.find(x => x.code === a.dataset.code), x = t.gmap[a.dataset.g];
+      a.onpointermove = e => showTip(e, `${t.name} · ${GAME_BY_ID[a.dataset.g].name}`, [{ c:css('--series-1'), l:'플레이', v:fmtDur(Number(x.total_ms) / 1000) }, { l:'접속', v:fmtN(x.sessions) + '회' }, { l:'최종 지점', v:x.last_milestone || '시작 전' }, { l:'마지막', v:fmtTime(x.last_at) }, ...(Number(x.devices) > 1 ? [{ l:'기기', v:x.devices + '대' }] : [])]);
+      a.onpointerleave = hideTip;
+    });
+  };
+  draw();
+  $('#tq').oninput = e => { TV.q = e.target.value; draw(); };
+  $('#tsort').onchange = e => { TV.sort = e.target.value; draw(); };
+  view.querySelectorAll('.chip').forEach(b => b.onclick = () => { TV.st = b.dataset.st; view.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === b)); draw(); });
+  $('#copyAll').onclick = () => copyText('이름\t코드\t메모\n' + T.map(t => `${t.name}\t${t.code}\t${t.memo || ''}`).join('\n'), `${T.length}명 이름·코드를`);
+  $('#addBtn').onclick = async () => {
+    const lines = $('#addNames').value.split('\n').map(l => l.trim()).filter(Boolean);
+    if (!lines.length) { $('#addMsg').textContent = '이름을 한 줄에 하나씩 넣어주세요.'; return; }
+    if (lines.length > 200) { $('#addMsg').textContent = '한 번에 200명까지 만들 수 있습니다.'; return; }
+    const rows = lines.map(l => { const i = l.indexOf(','); return { code:makeCode(), name:(i < 0 ? l : l.slice(0, i)).trim().slice(0, 60), memo:i < 0 ? null : l.slice(i + 1).trim().slice(0, 300) || null }; });
+    $('#addBtn').disabled = true; $('#addMsg').textContent = '만드는 중…';
+    try {
+      try { await api().createTesters(rows); }
+      catch (e) { if (!/409|duplicate/i.test(e.message)) throw e; rows.forEach(r => r.code = makeCode()); await api().createTesters(rows); }
+      toastMsg(`${rows.length}명 코드를 만들었습니다`); viewTesters();
+    } catch (e) { $('#addBtn').disabled = false; $('#addMsg').textContent = '실패: ' + e.message; }
+  };
+}
+
+async function viewTester(code) {
+  view.innerHTML = '<div class="empty">불러오는 중…</div>';
+  $('#range').style.visibility = 'hidden';
+  const list = await load(() => api().testers());
+  state.testerCount = list.length; renderNav();
+  const t = list.find(x => x.code === code);
+  if (!t) { setTitle('베타 테스터', ''); view.innerHTML = '<a class="back" href="#testers">← 테스터 목록</a><div class="card"><div class="empty">없는 코드입니다.</div></div>'; return; }
+  const gm = Object.fromEntries((t.games || []).map(x => [x.game_id, x]));
+  const total = Number(t.total_ms) || 0;
+  setTitle(t.name, `베타 테스터 · 코드 <span class="num">${esc(t.code)}</span> · ${t.active ? '사용 중' : '<span style="color:var(--bad)">중지됨</span>'} · 만든 날 ${fmtTime(t.created_at)}`);
+  view.innerHTML = `<a class="back" href="#testers">← 테스터 목록</a>
+    <div class="kpis">
+      <div class="kpi"><div class="l">해본 게임</div><div class="v">${t.games.length}<small>/8</small></div><div class="d">${t.games.map(x => SHORT_NAME[x.game_id]).join(', ') || '아직 없음'}</div></div>
+      <div class="kpi"><div class="l">총 플레이</div><div class="v">${total ? fmtDur(total / 1000) : '–'}</div><div class="d">접속 ${fmtN(t.games.reduce((a, x) => a + Number(x.sessions), 0))}회</div></div>
+      <div class="kpi"><div class="l">게임 입장</div><div class="v">${fmtN(t.ok_entries)}<small>회</small></div><div class="d">틀린·중지 상태 시도 ${fmtN(t.failed_entries)}회</div></div>
+      <div class="kpi"><div class="l">마지막 접속</div><div class="v" style="font-size:19px">${t.last_seen ? fmtTime(t.last_seen) : '–'}</div><div class="d">${t.last_seen ? ago(t.last_seen) : '아직 들어온 적 없음'}</div></div>
+    </div>
+    <section class="card"><div class="card-h"><div style="flex:1"><h2>게임별 기록</h2><p>게임 이름을 누르면 그 게임 안에서의 구간·접속 기록 전체를 볼 수 있습니다</p></div></div>
+      <div class="tbl-wrap"><table><thead><tr><th>게임</th><th>플레이</th><th>접속</th><th style="text-align:left">최종 지점</th><th style="text-align:left">상태</th><th>처음</th><th>마지막</th><th>기기</th></tr></thead><tbody>${
+      GAMES.map(g => { const x = gm[g.id];
+        if (!x) return `<tr><td class="l" style="color:var(--text-3)">${esc(g.name)}</td><td colspan="7" class="l" style="color:var(--text-3)">${g.url ? '아직 안 해봄' : '웹 버전 없음'}</td></tr>`;
+        const st = statusOf({ max_step:x.max_step, last_seen:x.last_at }, g);
+        return `<tr><td class="l"><a href="#player-${slug(g.id)}--${esc((x.visitors || [])[0] || '')}">${esc(g.name)}</a></td><td class="num">${fmtDur(Number(x.total_ms) / 1000)}</td><td class="num">${fmtN(x.sessions)}</td><td class="l">${esc(x.last_milestone || '시작 전')}</td><td class="l">${stHTML(st)}</td><td class="num">${fmtTime(x.first_at)}</td><td class="num">${ago(x.last_at)}</td><td class="num">${(x.visitors || []).length > 1 ? (x.visitors || []).map((v, i) => `<a class="pid" href="#player-${slug(g.id)}--${esc(v)}">${i + 1}</a>`).join(' ') : '1'}</td></tr>`; }).join('')
+      }</tbody></table></div></section>
+    <div class="grid2">
+      <section class="card"><div class="card-h"><h2 style="flex:1">정보 고치기</h2></div>
+        <div class="field"><label for="tn">이름</label><input id="tn" value="${esc(t.name)}" maxlength="60" style="width:100%;border:1px solid var(--line-strong);background:var(--bg);border-radius:8px;padding:8px 10px"></div>
+        <div class="field"><label for="tm">메모</label><input id="tm" value="${esc(t.memo || '')}" maxlength="300" style="width:100%;border:1px solid var(--line-strong);background:var(--bg);border-radius:8px;padding:8px 10px"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="tsave">저장</button><button class="btn" id="tact">${t.active ? '코드 사용 중지' : '다시 사용'}</button><span style="flex:1"></span><button class="btn" id="tdel" style="color:var(--bad)">삭제</button></div>
+      </section>
+      <section class="card"><div class="card-h"><div style="flex:1"><h2>개인 안내문</h2><p>메신저로 그대로 보내면 됩니다</p></div><button class="btn" id="tinv">복사</button></div>
+        <pre style="white-space:pre-wrap">${esc(inviteText(t))}</pre></section>
+    </div>`;
+  $('#tinv').onclick = () => copyText(inviteText(t), '안내문을');
+  $('#tsave').onclick = async () => {
+    const name = $('#tn').value.trim().slice(0, 60), memo = $('#tm').value.trim().slice(0, 300) || null;
+    if (!name) return toastMsg('이름을 넣어주세요', true);
+    try { await api().updateTester(code, { name, memo }); toastMsg('저장했습니다'); viewTester(code); } catch (e) { toastMsg('저장 실패: ' + e.message, true); }
+  };
+  $('#tact').onclick = async () => { try { await api().updateTester(code, { active:!t.active }); toastMsg(t.active ? '중지했습니다. 다음 접속부터 막힙니다' : '다시 사용할 수 있습니다'); viewTester(code); } catch (e) { toastMsg('실패: ' + e.message, true); } };
+  let armed = false;
+  $('#tdel').onclick = async () => {
+    if (!armed) { armed = true; $('#tdel').textContent = '정말 삭제 (기록은 남음)'; setTimeout(() => { armed = false; const b = $('#tdel'); if (b) b.textContent = '삭제'; }, 4000); return; }
+    try { await api().deleteTester(code); toastMsg('삭제했습니다'); location.hash = 'testers'; } catch (e) { toastMsg('삭제 실패: ' + e.message, true); }
+  };
+}
+
+/* =====================================================================
    라우팅
    ===================================================================== */
 let renderSeq = 0;
@@ -1199,10 +1448,12 @@ async function route() {
   const h = location.hash.slice(1) || 'overview';
   renderNav(); renderConn(); hideTip();
   $('#side').classList.remove('open');
-  $('#range').style.visibility = h === 'guide' ? 'hidden' : '';
+  $('#range').style.visibility = h === 'guide' || h === 'testers' || h.startsWith('tester-') ? 'hidden' : '';
   try {
     if (h === 'guide') viewGuide();
     else if (h.startsWith('game-')) await viewGame(unslug(h.slice(5)));
+    else if (h === 'testers') await viewTesters();
+    else if (h.startsWith('tester-')) await viewTester(h.slice(7));
     else if (h.startsWith('players-')) await viewPlayers(unslug(h.slice(8)));
     else if (h.startsWith('player-') && h.includes('--')) { const [gs, v] = h.slice(7).split('--'); await viewPlayer(unslug(gs), v); }
     else await viewOverview();
