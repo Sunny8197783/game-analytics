@@ -1455,27 +1455,74 @@ function smsText(t) {
 -우리 집 개는 영웅: https://sunny8197783.github.io/MyPetHero/
 -행성 공방: https://sunny8197783.github.io/PlanetBattle/`;
 }
+const GAME_LINKS = `-웨이팅 이상현상: https://taehyun1221s.github.io/waiting/
+-다 세워버려: https://taehyun1221s.github.io/flip_it_all/
+-국경의 장사꾼: https://sunny8197783.github.io/SellerOfTheBorder/
+-쥬라기 막싸움+공룡 교배소: https://taehyun1221s.github.io/dinosaur-gene/jurassic-brawl/
+-우리 집 개는 영웅: https://sunny8197783.github.io/MyPetHero/
+-행성 공방: https://sunny8197783.github.io/PlanetBattle/`;
+const GOAL_MIN = 60;
+function nudgeText(t) {
+  const m = Math.floor((t.total_ms || 0) / 60000), left = Math.max(0, GOAL_MIN - m);
+  const status = m <= 0
+    ? `아직 ${t.name}님의 플레이 기록이 확인되지 않았어요.`
+    : `현재 ${t.name}님은 6개 게임 합쳐서 총 ${m}분 플레이하셨고, ${left}분만 더 하시면 됩니다!`;
+  return `안녕하세요, 창업동아리 팀장 김태양입니다.
+베타테스트 마감이 내일(11/26)이라 다시 한번 연락드립니다.
+
+★ 게임 하나당 1시간이 아니라, 6개 게임 플레이 시간을 "모두 합쳐서" 총 1시간이면 됩니다! ★
+(예: 게임마다 10분씩만 해도 1시간)
+
+${status}
+바쁘시겠지만 꼭 "오늘 안에" 채워주시면 정말 감사하겠습니다. 🙏
+
+[${t.name}님의 고유 식별코드] ${t.code}
+(게임을 처음 열면 코드 입력 화면이 나와요. 게임마다 한 번씩 입력해 주세요)
+
+${GAME_LINKS}`;
+}
+const SMS = { mode:'nudge', onlyShort:true };
 async function viewSms() {
   setTitle('문자 보내기', '휴대폰에서 열고 <b>문자 앱 열기</b>를 누르면 번호·내용이 채워진 채로 열립니다');
   $('#range').style.visibility = 'hidden';
   view.innerHTML = '<div class="empty">불러오는 중…</div>';
-  const list = (await load(() => api().testers())).map(t => ({ ...t, phone:((t.memo || '').match(/01[016789]-?\d{3,4}-?\d{4}/) || [])[0] || '' }))
+  const list = (await load(() => api().testers())).map(t => ({ ...t, total_ms:Number(t.total_ms) || 0, phone:((t.memo || '').match(/01[016789]-?\d{3,4}-?\d{4}/) || [])[0] || '' }))
     .filter(t => !/^테스터 \d+$|관리자 테스트/.test(t.name))
-    .sort((a, b) => String(a.memo || '').localeCompare(String(b.memo || ''), 'ko', { numeric:true }) && a.name.localeCompare(b.name, 'ko'));
-  let sent = {}; try { sent = JSON.parse(localStorage.getItem('ga_sms_sent') || '{}'); } catch (e) {}
+    .sort((a, b) => a.total_ms - b.total_ms || a.name.localeCompare(b.name, 'ko'));
+  const KEY = () => SMS.mode === 'nudge' ? 'ga_sms_nudge_1126' : 'ga_sms_sent';
+  let sent = {};
+  const loadSent = () => { try { sent = JSON.parse(localStorage.getItem(KEY()) || '{}'); } catch (e) { sent = {}; } };
+  loadSent();
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  const textOf = t => SMS.mode === 'nudge' ? nudgeText(t) : smsText(t);
   const draw = () => {
-    const wp = list.filter(t => t.phone), n = wp.filter(t => sent[t.code]).length;
-    view.innerHTML = `<div class="banner"><span>📱</span><div><b>보냄 ${n} / ${wp.length}명</b> · 번호가 없는 ${list.length - wp.length}명은 <b>내용 복사</b>로 카톡 등에 보내세요. 체크는 이 기기에만 기억됩니다.</div></div>` +
-      list.map(t => {
-        const num = t.phone.replace(/-/g, ''), href = 'sms:' + num + (ios ? '&' : '?') + 'body=' + encodeURIComponent(smsText(t));
+    const done = list.filter(t => t.total_ms >= GOAL_MIN * 60000).length;
+    const rows = list.filter(t => !(SMS.mode === 'nudge' && SMS.onlyShort && t.total_ms >= GOAL_MIN * 60000));
+    const wp = rows.filter(t => t.phone), n = wp.filter(t => sent[t.code]).length;
+    view.innerHTML = `
+      <div class="filters" style="margin-bottom:10px">
+        <button class="chip ${SMS.mode === 'nudge' ? 'on' : ''}" data-mode="nudge">⏰ 독촉 문자</button>
+        <button class="chip ${SMS.mode === 'first' ? 'on' : ''}" data-mode="first">처음 안내 문자</button>
+        ${SMS.mode === 'nudge' ? `<label style="display:flex;gap:6px;align-items:center;font-size:13px;color:var(--text-2)"><input type="checkbox" id="onlyShort" ${SMS.onlyShort ? 'checked' : ''}> 1시간 못 채운 사람만</label>` : ''}
+      </div>
+      <div class="banner"><span>${SMS.mode === 'nudge' ? '⏰' : '📱'}</span><div><b>보냄 ${n} / ${wp.length}명</b> · 1시간 채운 사람 <b>${done} / ${list.length}명</b>${SMS.mode === 'nudge' ? ' · 문자에 각자 지금까지 플레이한 시간과 남은 시간이 들어갑니다' : ''}. 번호 없는 사람은 <b>내용 복사</b>로 카톡에 보내세요.</div></div>` +
+      rows.map(t => {
+        const num = t.phone.replace(/-/g, ''), href = 'sms:' + num + (ios ? '&' : '?') + 'body=' + encodeURIComponent(textOf(t));
+        const m = Math.floor(t.total_ms / 60000), pctv = Math.min(100, m / GOAL_MIN * 100), ok = m >= GOAL_MIN;
         return `<section class="card" style="${sent[t.code] ? 'opacity:.5' : ''}">
-          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b style="font-size:16px">${esc(t.name)}</b>${t.phone ? `<span class="num">${esc(t.phone)}</span>` : '<span style="color:var(--bad);font-size:13px">전화번호 없음</span>'}<span class="code" style="cursor:default">${esc(t.code)}</span>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b style="font-size:16px">${esc(t.name)}</b>${t.phone ? `<span class="num">${esc(t.phone)}</span>` : '<span style="color:var(--bad);font-size:13px">전화번호 없음</span>'}
           <label style="margin-left:auto;display:flex;gap:6px;align-items:center;font-size:13px;color:var(--text-2)"><input type="checkbox" data-c="${esc(t.code)}" ${sent[t.code] ? 'checked' : ''}> 보냄</label></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${t.phone ? `<a class="btn primary" style="text-decoration:none;padding:9px 14px" href="${href}">문자 앱 열기</a><button class="btn" data-p="${esc(num)}">번호 복사</button>` : ''}<button class="btn" data-m="${esc(t.code)}">내용 복사</button></div></section>`; }).join('');
+          <div style="display:flex;align-items:center;gap:10px;margin-top:8px;font-size:13px">
+            <div style="flex:1;height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden"><div style="height:100%;width:${pctv}%;background:${ok ? 'var(--good)' : 'var(--series-1)'}"></div></div>
+            <span class="num" style="white-space:nowrap">${ok ? '✅ ' : ''}${m}분 / ${GOAL_MIN}분${ok ? '' : ` · ${GOAL_MIN - m}분 남음`}</span></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${t.phone ? `<a class="btn primary" style="text-decoration:none;padding:9px 14px" href="${href}">${SMS.mode === 'nudge' ? '독촉 문자 열기' : '문자 앱 열기'}</a><button class="btn" data-p="${esc(num)}">번호 복사</button>` : ''}<button class="btn" data-m="${esc(t.code)}">내용 복사</button></div>
+          <details style="margin-top:6px"><summary style="cursor:pointer;font-size:12.5px;color:var(--text-3)">보낼 내용 보기</summary><pre style="white-space:pre-wrap">${esc(textOf(t))}</pre></details></section>`; }).join('') +
+      (rows.length ? '' : `<div class="card"><div class="empty">${list.length ? '모두 1시간을 채웠습니다 🎉' : '이름이 등록된 테스터가 없습니다.'}</div></div>`);
+    view.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { SMS.mode = b.dataset.mode; loadSent(); draw(); });
+    const os = $('#onlyShort'); if (os) os.onchange = () => { SMS.onlyShort = os.checked; draw(); };
     view.querySelectorAll('[data-p]').forEach(b => b.onclick = () => copyText(b.dataset.p, '번호를'));
-    view.querySelectorAll('[data-m]').forEach(b => b.onclick = () => copyText(smsText(list.find(t => t.code === b.dataset.m)), '내용을'));
-    view.querySelectorAll('input[data-c]').forEach(c => c.onchange = () => { sent[c.dataset.c] = c.checked; try { localStorage.setItem('ga_sms_sent', JSON.stringify(sent)); } catch (e) {} draw(); });
+    view.querySelectorAll('[data-m]').forEach(b => b.onclick = () => copyText(textOf(list.find(t => t.code === b.dataset.m)), '내용을'));
+    view.querySelectorAll('input[data-c]').forEach(c => c.onchange = () => { sent[c.dataset.c] = c.checked; try { localStorage.setItem(KEY(), JSON.stringify(sent)); } catch (e) {} draw(); });
   };
   draw();
 }
